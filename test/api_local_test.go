@@ -1,6 +1,7 @@
 package test
 
 import (
+	"fmt"
 	"github.com/Azer0s/quacktors"
 	"github.com/Azer0s/quacktors/messages"
 	"github.com/Azer0s/quacktors/pid"
@@ -23,7 +24,7 @@ func TestSpawn(t *testing.T) {
 
 	p := quacktors.Spawn(func() {
 		for {
-			t.Log("hello")
+			fmt.Println("hello")
 		}
 	})
 
