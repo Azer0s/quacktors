@@ -1,4 +1,7 @@
-# Quacktors
+[![Github Action](https://github.com/Azer0s/quacktors/workflows/Go/badge.svg) [![Go Report Card](https://goreportcard.com/badge/github.com/Azer0s/quacktors)] [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://github.com/Azer0s/quacktors/blob/master/LICENSE.md)
+
+
+# quacktors
 
 ```go
 self := quacktors.Self()
