@@ -3,7 +3,7 @@ package test
 import (
 	"fmt"
 	"github.com/Azer0s/quacktors"
-	"github.com/Azer0s/quacktors/actors"
+	"github.com/Azer0s/quacktors/messages"
 	"github.com/Azer0s/quacktors/pid"
 	"github.com/stretchr/testify/assert"
 	"sync"
@@ -85,7 +85,7 @@ func TestMonitor(t *testing.T) {
 
 	msg := quacktors.Receive()
 
-	if downMsg, ok := msg.(actors.ActorDownMessage); ok {
+	if downMsg, ok := msg.(messages.ActorDownMessage); ok {
 		a.Equal(downMsg.Who, p)
 		a.False(p.Up())
 	}

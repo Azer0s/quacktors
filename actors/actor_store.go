@@ -9,6 +9,7 @@ import (
 var pidMap = make(map[uint64]pid.Pid)
 var pidMapMu = &sync.RWMutex{}
 
+// GetByGoid returns a PID by the goroutine ID
 func GetByGoid(goid uint64) (pid.Pid, error) {
 	pidMapMu.RLock()
 	defer pidMapMu.RUnlock()
@@ -20,6 +21,7 @@ func GetByGoid(goid uint64) (pid.Pid, error) {
 	return nil, util.PidDoesNotExistError()
 }
 
+// StoreByGoid stores a PID by its goroutine ID
 func StoreByGoid(goid uint64, pid pid.Pid) {
 	pidMapMu.Lock()
 	defer pidMapMu.Unlock()
@@ -27,6 +29,7 @@ func StoreByGoid(goid uint64, pid pid.Pid) {
 	pidMap[goid] = pid
 }
 
+// DeleteByGoid deletes a PID by its goroutine ID
 func DeleteByGoid(goid uint64) {
 	pidMapMu.Lock()
 	defer pidMapMu.Unlock()
