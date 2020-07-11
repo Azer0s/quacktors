@@ -51,15 +51,15 @@ func TestSendReceive(t *testing.T) {
 	self := quacktors.Self()
 
 	type message struct {
-		sender  pid.Pid
-		text string
+		sender pid.Pid
+		text   string
 	}
 
 	wg.Add(1)
 	quacktors.Spawn(func() {
 		quacktors.Send(self, message{
-			sender:  quacktors.Self(),
-			text: "ping",
+			sender: quacktors.Self(),
+			text:   "ping",
 		})
 		a.Equal(quacktors.Receive(), "pong")
 		wg.Done()

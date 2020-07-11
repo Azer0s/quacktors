@@ -3,10 +3,10 @@ package pid
 import "sync"
 
 type LocalPid struct {
-	incoming chan interface{}
-	monitors []Pid
+	incoming   chan interface{}
+	monitors   []Pid
 	monitorsMu sync.Mutex
-	up bool
+	up         bool
 }
 
 func (p *LocalPid) Send(data interface{}) {

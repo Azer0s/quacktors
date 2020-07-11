@@ -7,6 +7,6 @@ func (p *RemotePid) Send(data interface{}) {
 
 }
 
-func (p*RemotePid) Monitor(by Pid) {
+func (p *RemotePid) Monitor(by Pid) {
 
 }
