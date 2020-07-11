@@ -7,7 +7,7 @@
 self := quacktors.Self()
 pid := quacktors.Spawn(func() {
     quacktors.Send(self, "Hello")
-})​
+})
 msg := quacktors.Receive()
 fmt.Println(msg)
 ```
