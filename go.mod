@@ -1,4 +1,4 @@
-module github.com/Azer0s/Quacktors
+module github.com/Azer0s/quacktors
 
 go 1.14
 

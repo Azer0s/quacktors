@@ -1,8 +1,8 @@
 package actors
 
 import (
-	"github.com/Azer0s/Quacktors/quacktors/pid"
-	"github.com/Azer0s/Quacktors/quacktors/util"
+	"github.com/Azer0s/quacktors/pid"
+	"github.com/Azer0s/quacktors/util"
 )
 
 func Spawn(action func()) pid.Pid {

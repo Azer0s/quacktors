@@ -1,9 +1,9 @@
 package quacktors
 
 import (
-	"github.com/Azer0s/Quacktors/quacktors/actors"
-	"github.com/Azer0s/Quacktors/quacktors/pid"
-	"github.com/Azer0s/Quacktors/quacktors/util"
+	"github.com/Azer0s/quacktors/actors"
+	"github.com/Azer0s/quacktors/pid"
+	"github.com/Azer0s/quacktors/util"
 )
 
 func Self() pid.Pid {

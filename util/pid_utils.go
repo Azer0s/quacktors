@@ -1,7 +1,7 @@
 package util
 
 import (
-	"github.com/Azer0s/Quacktors/quacktors/pid"
+	"github.com/Azer0s/quacktors/pid"
 )
 
 func PidToLocalPid(p pid.Pid) *pid.LocalPid {

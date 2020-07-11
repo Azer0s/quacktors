@@ -2,9 +2,9 @@ package test
 
 import (
 	"fmt"
-	"github.com/Azer0s/Quacktors/quacktors"
-	"github.com/Azer0s/Quacktors/quacktors/actors"
-	pid2 "github.com/Azer0s/Quacktors/quacktors/pid"
+	"github.com/Azer0s/quacktors"
+	"github.com/Azer0s/quacktors/actors"
+	"github.com/Azer0s/quacktors/pid"
 	"github.com/stretchr/testify/assert"
 	"sync"
 	"testing"
@@ -22,13 +22,13 @@ func TestSelf(t *testing.T) {
 func TestSpawn(t *testing.T) {
 	a := assert.New(t)
 
-	pid := quacktors.Spawn(func() {
+	p := quacktors.Spawn(func() {
 		for {
 			fmt.Println("Hello")
 		}
 	})
 
-	a.NotEqual(pid, quacktors.Self())
+	a.NotEqual(p, quacktors.Self())
 }
 
 func TestSend(t *testing.T) {
@@ -51,14 +51,14 @@ func TestSendReceive(t *testing.T) {
 	self := quacktors.Self()
 
 	type message struct {
-		pid  pid2.Pid
+		sender  pid.Pid
 		text string
 	}
 
 	wg.Add(1)
 	quacktors.Spawn(func() {
 		quacktors.Send(self, message{
-			pid:  quacktors.Self(),
+			sender:  quacktors.Self(),
 			text: "ping",
 		})
 		a.Equal(quacktors.Receive(), "pong")
@@ -68,25 +68,25 @@ func TestSendReceive(t *testing.T) {
 	msg := quacktors.Receive().(message)
 	a.Equal("ping", msg.text)
 
-	quacktors.Send(msg.pid, "pong")
+	quacktors.Send(msg.sender, "pong")
 	wg.Wait()
 }
 
 func TestMonitor(t *testing.T) {
 	a := assert.New(t)
 
-	pid := quacktors.Spawn(func() {
+	p := quacktors.Spawn(func() {
 		quacktors.Receive()
 		//ignored
 	})
 
-	quacktors.Monitor(pid)
-	quacktors.Send(pid, nil)
+	quacktors.Monitor(p)
+	quacktors.Send(p, nil)
 
 	msg := quacktors.Receive()
 
 	if downMsg, ok := msg.(actors.ActorDownMessage); ok {
-		a.Equal(downMsg.Who, pid)
-		a.False(pid.Up())
+		a.Equal(downMsg.Who, p)
+		a.False(p.Up())
 	}
 }

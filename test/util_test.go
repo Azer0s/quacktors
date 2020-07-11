@@ -1,7 +1,7 @@
 package test
 
 import (
-	"github.com/Azer0s/Quacktors/quacktors/util"
+	"github.com/Azer0s/quacktors/util"
 	"github.com/stretchr/testify/assert"
 	"testing"
 )
