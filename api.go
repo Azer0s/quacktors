@@ -2,8 +2,10 @@ package quacktors
 
 import (
 	"github.com/Azer0s/quacktors/actors"
+	"github.com/Azer0s/quacktors/node"
 	"github.com/Azer0s/quacktors/pid"
 	"github.com/Azer0s/quacktors/util"
+	"sync"
 )
 
 // Self returns the PID of the caller goroutine/actor
@@ -44,4 +46,26 @@ func Monitor(toMonitor pid.Pid) {
 	}
 
 	toMonitor.Monitor(p)
+}
+
+func StartGateway(port int) {
+	node.SetRemotePort(port)
+
+	go func() {
+		wg := sync.WaitGroup{}
+		for {
+			wg.Add(1)
+			go func() {
+				defer func() {
+					if r := recover(); r != nil {
+						//ignored
+					}
+				}()
+
+				node.StartLink()
+				wg.Done()
+			}()
+			wg.Wait()
+		}
+	}()
 }

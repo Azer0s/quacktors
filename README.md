@@ -13,7 +13,8 @@ fmt.Println(msg)
 ```
 
 ```go
-quacktors.SetHostname("alex@localhost")
+quacktors.StartGateway(5521)
+foo := quacktors.NewSystem("foo")
 
 pid := quacktors.Spawn(func() {
     for {
@@ -21,13 +22,11 @@ pid := quacktors.Spawn(func() {
     }
 })
 
-quacktors.HandleRemote()
+foo.HandleRemote("printer", pid)
 ```
 
 ```go
-quacktors.SetHostname("john@localhost")
-
-node := quacktors.Connect("alex@localhost")
+node := quacktors.Connect("foo@127.0.0.1:5521")
 printer := node.Remote("printer")
 
 quacktors.Send(printer, "Hello, world")
