@@ -15,6 +15,8 @@ msg := quacktors.Receive()
 fmt.Println(msg)
 ```
 
+<br>
+
 ### Getting started
 
 ```go
