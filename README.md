@@ -6,10 +6,10 @@
 
 quacktors or "quick actors" is a Go framework that brings Erlang/Elixir style concurrency to Go! It allows for message passing, actor monitoring and can even deal with remote actors/systems. Furthermore, it comes with plenty of useful standard modules for building actor model systems (like Supervisors, Genservers, etc.). Oh and there's more: quacktors is super easy to use!
 
-```go
-self := quacktors.Self()
+```swift
+main := quacktors.Self()
 pid := quacktors.Spawn(func() {
-    quacktors.Send(self, "Hello, quacktors!")
+    quacktors.Send(main, "Hello, quacktors!")
 })
 msg := quacktors.Receive()
 fmt.Println(msg)
@@ -20,21 +20,27 @@ fmt.Println(msg)
 ### Getting started
 
 ```go
-quacktors.StartGateway(5521)
-foo := quacktors.NewSystem("foo")
+func main() {
+    quacktors.StartGateway(5521)
+    foo := quacktors.NewSystem("foo")
 
-pid := quacktors.Spawn(func() {
-    for {
-        fmt.Println(quacktors.Receive())
-    }
-})
+    pid := quacktors.Spawn(func() {
+        for {
+            fmt.Println(quacktors.Receive())
+        }
+    })
 
-foo.HandleRemote("printer", pid)
+    foo.HandleRemote("printer", pid)
+    
+    quacktors.Run()
+}
 ```
 
 ```go
-node := quacktors.Connect("foo@127.0.0.1:5521")
-printer := node.Remote("printer")
+func main() {
+    node := quacktors.Connect("foo@127.0.0.1:5521")
+    printer := node.Remote("printer")
 
-quacktors.Send(printer, "Hello, world")
+    quacktors.Send(printer, "Hello, world")
+}
 ```
