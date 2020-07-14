@@ -9,11 +9,13 @@ quacktors or "quick actors" is a Go framework that brings Erlang/Elixir style co
 ```go
 self := quacktors.Self()
 pid := quacktors.Spawn(func() {
-    quacktors.Send(self, "Hello")
+    quacktors.Send(self, "Hello, quacktors!")
 })
 msg := quacktors.Receive()
 fmt.Println(msg)
 ```
+
+### Getting started
 
 ```go
 quacktors.StartGateway(5521)
