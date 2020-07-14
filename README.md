@@ -19,28 +19,22 @@ fmt.Println(msg)
 
 ### Getting started
 
-```go
-func main() {
-    quacktors.StartGateway(5521)
-    foo := quacktors.NewSystem("foo")
+```swift
+quacktors.StartGateway(5521)
+foo := quacktors.NewSystem("foo")
 
-    pid := quacktors.Spawn(func() {
-        for {
-            fmt.Println(quacktors.Receive())
-        }
-    })
+pid := quacktors.Spawn(func() {
+    for {
+        fmt.Println(quacktors.Receive())
+    }
+})
 
-    foo.HandleRemote("printer", pid)
-    
-    quacktors.Run()
-}
+foo.HandleRemote("printer", pid)
 ```
 
-```go
-func main() {
-    node := quacktors.Connect("foo@127.0.0.1:5521")
-    printer := node.Remote("printer")
+```swift
+node := quacktors.Connect("foo@127.0.0.1:5521")
+printer := node.Remote("printer")
 
-    quacktors.Send(printer, "Hello, world")
-}
+quacktors.Send(printer, "Hello, world")
 ```
