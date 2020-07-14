@@ -1,7 +1,9 @@
 package node
 
 import (
-	"log"
+	"encoding/json"
+	"github.com/Azer0s/quacktors/messages"
+	"github.com/Azer0s/quacktors/util"
 	"net"
 	"strconv"
 )
@@ -31,8 +33,35 @@ func StartLink() {
 }
 
 func handleConnection(n int, addr *net.UDPAddr, err error, buffer []byte, connection *net.UDPConn) {
-	log.Println("-> ", string(buffer[0:n-1]))
-	data := []byte("Hello there!\n")
+	if err != nil {
+		util.SendErr(connection, addr)
+		return
+	}
+
+	var request messages.GatewayRequest
+	err = json.Unmarshal(buffer[0:n-1], &request)
+
+	if err != nil {
+		util.SendErr(connection, addr)
+		return
+	}
+
+	p, err := GetSystemPort(request.System)
+
+	if err != nil {
+		util.SendErr(connection, addr)
+		return
+	}
+
+	data, err := json.Marshal(messages.GatewayResponse{
+		Err:        false,
+		SystemPort: p,
+	})
+
+	if err != nil {
+		util.SendErr(connection, addr)
+		return
+	}
 
 	_, _ = connection.WriteToUDP(data, addr)
 }

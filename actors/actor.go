@@ -8,19 +8,19 @@ import (
 
 // Spawn spawns an actor by a function and returns its PID
 func Spawn(action func()) pid.Pid {
-	p := pid.NewPid()
-	Start(action, p)
+	p, id := pid.NewPid()
+	Start(action, p, id)
 	return p
 }
 
 // Start Starts the control function of an actor (does monitoring, etc)
-func Start(action func(), pid pid.Pid) {
+func Start(action func(), pid pid.Pid, id string) {
 	go func() {
 		goid := util.GetGoid()
-		StoreByGoid(goid, pid)
+		StoreByGoid(goid, pid, id)
 
 		defer func() {
-			DeleteByGoid(goid)
+			DeleteByGoid(goid, id)
 
 			localPid := util.PidToLocalPid(pid)
 			localPid.Down()

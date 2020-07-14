@@ -1,21 +1,21 @@
 package test
 
 import (
+	"fmt"
 	"github.com/Azer0s/quacktors"
-	"net"
 	"testing"
 )
 
-const loopback = "127.0.0.1"
-
-//noinspection GoUnhandledErrorResult
 func TestGatewayConnection(t *testing.T) {
 	quacktors.StartGateway(5521)
+	foo := quacktors.NewSystem("foo")
+	fmt.Println(foo)
 
-	conn, err := net.Dial("udp", ":5521")
+	node, err := quacktors.Connect("foo@127.0.0.1:5521")
+
 	if err != nil {
-		t.Error("could not connect to server: ", err)
+		panic(err)
 	}
-	defer conn.Close()
-}
 
+	fmt.Println(node)
+}

@@ -14,8 +14,9 @@ func Self() pid.Pid {
 	p, err := actors.GetByGoid(goid)
 
 	if err != nil {
-		p = pid.NewPid()
-		actors.StoreByGoid(goid, p)
+		var id string
+		p, id = pid.NewPid()
+		actors.StoreByGoid(goid, p, id)
 	}
 
 	return p
@@ -26,18 +27,18 @@ func Spawn(action func()) pid.Pid {
 	return actors.Spawn(action)
 }
 
-// Send sends data to a PID, this is a non-blocking call
+// Send sends data to a PID; this is a non-blocking call
 func Send(pid pid.Pid, data interface{}) {
 	go pid.Send(data)
 }
 
-// Receive receives data sent to the caller goroutine/actor, this is a blocking call
+// Receive receives data sent to the caller goroutine/actor; this is a blocking call
 func Receive() interface{} {
 	p := Self()
 	return util.PidToLocalPid(p).Receive()
 }
 
-// Monitor monitors a PID, when the state of the monitored PID goes down, a message is sent to the monitoring actor
+// Monitor monitors a PID; when the state of the monitored PID goes down, a message is sent to the monitoring actor
 func Monitor(toMonitor pid.Pid) {
 	p := Self()
 
@@ -48,6 +49,7 @@ func Monitor(toMonitor pid.Pid) {
 	toMonitor.Monitor(p)
 }
 
+// StartGateway starts the remote gateway so other actor systems can reach local actor systems
 func StartGateway(port int) {
 	node.SetRemotePort(port)
 
@@ -68,4 +70,23 @@ func StartGateway(port int) {
 			wg.Wait()
 		}
 	}()
+}
+
+func NewSystem(name string) node.System {
+	system := node.NewSystem(name)
+	node.StoreSystem(system)
+
+	//TODO: Start system server
+
+	return system
+}
+
+func Connect(address string) (node.Remote, error) {
+	s, a, p, err := util.ParseAddress(address)
+
+	if err != nil {
+		return node.Remote{}, err
+	}
+
+	return node.ConnectRemote(s, a, p)
 }

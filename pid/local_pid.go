@@ -8,6 +8,7 @@ type LocalPid struct {
 	monitors   []Pid
 	monitorsMu sync.Mutex
 	up         bool
+	id         string
 }
 
 // Send sends data to an actor on the local system
