@@ -1,6 +1,8 @@
 package pid
 
-import "sync"
+import (
+	"sync"
+)
 
 // LocalPid is a PID that points to an actor on the local system
 type LocalPid struct {

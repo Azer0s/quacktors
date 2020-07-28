@@ -5,7 +5,6 @@ import (
 	"github.com/Azer0s/quacktors/node"
 	"github.com/Azer0s/quacktors/pid"
 	"github.com/Azer0s/quacktors/util"
-	"sync"
 )
 
 // Self returns the PID of the caller goroutine/actor
@@ -51,31 +50,15 @@ func Monitor(toMonitor pid.Pid) {
 
 // StartGateway starts the remote gateway so other actor systems can reach local actor systems
 func StartGateway(port int) {
-	node.SetRemotePort(port)
-
 	go func() {
-		wg := sync.WaitGroup{}
-		for {
-			wg.Add(1)
-			go func() {
-				defer func() {
-					if r := recover(); r != nil {
-						//ignored
-					}
-				}()
-
-				node.StartLink()
-				wg.Done()
-			}()
-			wg.Wait()
-		}
+		node.StartGatewayServer(port)
 	}()
 }
 
 func NewSystem(name string) node.System {
 	system := node.NewSystem(name)
 	node.StoreSystem(system)
-
+	node.StorePortBinding(system.SetupLink(), name)
 	//TODO: Start system server
 
 	return system

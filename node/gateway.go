@@ -8,14 +8,8 @@ import (
 	"strconv"
 )
 
-var remotePort int
-
-func SetRemotePort(port int) {
-	remotePort = port
-}
-
-func StartLink() {
-	addr, err := net.ResolveUDPAddr("udp", ":"+strconv.Itoa(remotePort))
+func StartLink(port int) {
+	addr, err := net.ResolveUDPAddr("udp", ":"+strconv.Itoa(port))
 	if err != nil {
 		panic(err)
 	}
@@ -39,7 +33,7 @@ func handleConnection(n int, addr *net.UDPAddr, err error, buffer []byte, connec
 	}
 
 	var request messages.GatewayRequest
-	err = json.Unmarshal(buffer[0:n-1], &request)
+	err = json.Unmarshal(buffer[0:n], &request)
 
 	if err != nil {
 		util.SendErr(connection, addr)

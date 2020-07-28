@@ -61,7 +61,7 @@ func TestParseRemoteAddress(t *testing.T) {
 	}
 	as.Equal(5521, p)
 	as.Equal("foo", system)
-	as.Equal("1762:0:0:0:0:B03:1:AF18", addr)
+	as.Equal("[1762:0:0:0:0:B03:1:AF18]", addr)
 
 	system, addr, p, err = util.ParseAddress(f)
 	if err != nil {
@@ -69,7 +69,7 @@ func TestParseRemoteAddress(t *testing.T) {
 	}
 	as.Equal(5521, p)
 	as.Equal("foo", system)
-	as.Equal("64:ff9b::", addr)
+	as.Equal("[64:ff9b::]", addr)
 
 	system, addr, p, err = util.ParseAddress(g)
 	if err != nil {
@@ -77,6 +77,6 @@ func TestParseRemoteAddress(t *testing.T) {
 	}
 	as.Equal(5521, p)
 	as.Equal("foo", system)
-	as.Equal("2001:db8:3:4::", addr)
+	as.Equal("[2001:db8:3:4::]", addr)
 
 }

@@ -21,3 +21,8 @@ func InvalidAddressError() error {
 func SystemDoesNotExistError() error {
 	return errors.New("system does not exist")
 }
+
+// RemoteError returns an error message for the case a remote system reported an error while connecting
+func RemoteConnectError() error {
+	return errors.New("the remote system reported an error while connecting")
+}

@@ -1,6 +1,8 @@
 package pid
 
-import "github.com/google/uuid"
+import (
+	"github.com/google/uuid"
+)
 
 // NewPid creates a new local PID
 func NewPid() (Pid, string) {

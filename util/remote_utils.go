@@ -6,7 +6,6 @@ import (
 	"net"
 	"regexp"
 	"strconv"
-	"strings"
 )
 
 var addrRegex *regexp.Regexp
@@ -29,7 +28,7 @@ func ParseAddress(addr string) (system, address string, port int, err error) {
 
 	matches := addrRegex.FindStringSubmatch(addr)
 	system = matches[1]
-	address = strings.ReplaceAll(strings.ReplaceAll(matches[2], "[", ""), "]", "")
+	address = matches[2]
 	p, err := strconv.Atoi(matches[3])
 
 	if err != nil {

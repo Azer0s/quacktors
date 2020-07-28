@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"github.com/Azer0s/quacktors"
 	"testing"
+	"time"
 )
 
 func TestGatewayConnection(t *testing.T) {
@@ -18,4 +19,5 @@ func TestGatewayConnection(t *testing.T) {
 	}
 
 	fmt.Println(node)
+	time.Sleep(10 * time.Second)
 }
