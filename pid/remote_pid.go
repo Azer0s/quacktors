@@ -5,7 +5,7 @@ type RemotePid struct {
 }
 
 // Send sends data to an actor on a remote system
-func (p RemotePid) Send(data interface{}) {
+func (p RemotePid) Send(data interface{}, orderingComplete chan interface{}) {
 
 }
 

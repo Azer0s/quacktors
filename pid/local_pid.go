@@ -14,11 +14,13 @@ type LocalPid struct {
 }
 
 // Send sends data to an actor on the local system
-func (p *LocalPid) Send(data interface{}) {
+func (p *LocalPid) Send(data interface{}, orderingComplete chan interface{}) {
 	select {
 	case p.incoming <- data:
 	default:
 	}
+
+	orderingComplete <- nil
 }
 
 // Receive receives data from the inbox of a local actor

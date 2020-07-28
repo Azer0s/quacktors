@@ -11,7 +11,7 @@ import (
 type System struct {
 	name       string
 	remotePids map[string]pid.Pid
-	conn *net.UDPConn
+	conn       *net.UDPConn
 }
 
 func (s *System) HandleRemote(name string, handler pid.Pid) {
@@ -40,6 +40,6 @@ func (s *System) SetupLink() int {
 	s.conn = connection
 
 	a := strings.Split(connection.LocalAddr().String(), ":")
-	port, err := strconv.Atoi(a[len(a) - 1])
+	port, err := strconv.Atoi(a[len(a)-1])
 	return port
 }

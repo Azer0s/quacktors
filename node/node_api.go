@@ -55,7 +55,7 @@ func StartSystemServer(system System) {
 func ConnectRemote(system, addr string, port int) (Remote, error) {
 	msg := messages.GatewayRequest{System: system}
 
-	conn, err := net.Dial("udp", addr + ":" + strconv.Itoa(port))
+	conn, err := net.Dial("udp", addr+":"+strconv.Itoa(port))
 	if err != nil {
 		return Remote{}, err
 	}
@@ -89,7 +89,7 @@ func ConnectRemote(system, addr string, port int) (Remote, error) {
 		return Remote{}, util.RemoteConnectError()
 	}
 
-	systemAddr, err := net.ResolveUDPAddr("udp", addr + ":" + strconv.Itoa(res.SystemPort))
+	systemAddr, err := net.ResolveUDPAddr("udp", addr+":"+strconv.Itoa(res.SystemPort))
 	if err != nil {
 		return Remote{}, err
 	}

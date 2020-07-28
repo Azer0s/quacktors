@@ -28,7 +28,9 @@ func Spawn(action func()) pid.Pid {
 
 // Send sends data to a PID; this is a non-blocking call
 func Send(pid pid.Pid, data interface{}) {
-	go pid.Send(data)
+	orderingComplete := make(chan interface{})
+	go pid.Send(data, orderingComplete)
+	<-orderingComplete
 }
 
 // Receive receives data sent to the caller goroutine/actor; this is a blocking call

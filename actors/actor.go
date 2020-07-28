@@ -26,8 +26,11 @@ func Start(action func(), pid pid.Pid, id string) {
 			localPid.Down()
 
 			downMessage := messages.ActorDownMessage{Who: pid}
+
+			orderingComplete := make(chan interface{})
+
 			for _, monitor := range localPid.Monitors() {
-				go monitor.Send(downMessage)
+				go monitor.Send(downMessage, orderingComplete)
 			}
 		}()
 
