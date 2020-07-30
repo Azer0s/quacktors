@@ -6,7 +6,11 @@ type RemotePid struct {
 
 // Send sends data to an actor on a remote system
 func (p RemotePid) Send(data interface{}, orderingComplete chan interface{}) {
-
+    // setup connection
+    // p.connMu.Lock()
+    // defer p.connMu.Unlock()
+    // orderingComplete <- nil
+    // send data
 }
 
 // Up returns true if an actor on a remote system is up
