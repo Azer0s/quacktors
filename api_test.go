@@ -2,6 +2,8 @@ package quacktors
 
 import (
 	"encoding/json"
+	"fmt"
+	"runtime"
 	"testing"
 )
 
@@ -29,10 +31,6 @@ func (t TestMessage) Type() string {
 	return "TestMessage"
 }
 
-func TestConnect(t *testing.T) {
-
-}
-
 func TestSpawn(t *testing.T) {
 	RegisterType(&TestMessage{})
 
@@ -42,16 +40,31 @@ func TestSpawn(t *testing.T) {
 		panic(err)
 	}
 
-	self := DebugPid()
-
-	p := Spawn(func(ctx *Context) {
-		if v, ok := ctx.Receive().(TestMessage); ok {
-			v.Type()
+	p := Spawn(func(ctx *Context, message Message) {
+		switch m := message.(type) {
+		case TestMessage:
+			fmt.Printf("GOOS: %s", m.Foo)
+		default:
+			fmt.Println("Unrecognized type!")
 		}
-		Send(self, TestMessage{Foo: "hello"})
-		ctx.Self()
-		ctx.Children()
 	})
 
 	s.HandleRemote("printer", p)
+	Send(p, TestMessage{Foo: runtime.GOOS})
+}
+
+type TestActor struct {
+	count int
+}
+
+func (t *TestActor) Run(ctx *Context, message Message)  {
+	for {
+		t.count++
+	}
+}
+
+func TestActorSpawn(t *testing.T) {
+	actor := &TestActor{}
+
+	SpawnStateful(actor)
 }
