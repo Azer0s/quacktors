@@ -16,5 +16,5 @@ func getType(name string) Message {
 	typesMu.RLock()
 	defer typesMu.RUnlock()
 
-	return create(types[name])
+	return createFromTemplateMessage(types[name])
 }

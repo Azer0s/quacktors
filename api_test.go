@@ -1,30 +1,13 @@
 package quacktors
 
 import (
-	"encoding/json"
 	"fmt"
 	"runtime"
 	"testing"
 )
 
 type TestMessage struct {
-	Foo string `json:"foo"`
-}
-
-func (t TestMessage) Serialize() string {
-	b, err := json.Marshal(t)
-
-	if err != nil {
-		panic(err)
-	}
-
-	return string(b)
-}
-
-func (t TestMessage) Deserialize(s string) Message {
-	m := TestMessage{}
-	_ = json.Unmarshal([]byte(s), &m)
-	return m
+	Foo string
 }
 
 func (t TestMessage) Type() string {
@@ -32,7 +15,10 @@ func (t TestMessage) Type() string {
 }
 
 func TestSpawn(t *testing.T) {
+	//qpmdLookup("foo", "127.0.0.1", 0)
+
 	RegisterType(&TestMessage{})
+	rootCtx := RootContext()
 
 	s, err := NewSystem("test")
 
@@ -44,23 +30,34 @@ func TestSpawn(t *testing.T) {
 		switch m := message.(type) {
 		case TestMessage:
 			fmt.Printf("GOOS: %s", m.Foo)
+			ctx.Quit()
 		default:
 			fmt.Println("Unrecognized type!")
 		}
 	})
 
+	SpawnWithInit(func(ctx *Context) {
+		ctx.Monitor(p)
+	}, func(ctx *Context, message Message) {
+		fmt.Println("Ded")
+	})
+
 	s.HandleRemote("printer", p)
-	Send(p, TestMessage{Foo: runtime.GOOS})
+	rootCtx.Send(p, TestMessage{Foo: runtime.GOOS})
 }
 
 type TestActor struct {
 	count int
 }
 
-func (t *TestActor) Run(ctx *Context, message Message)  {
+func (t *TestActor) Run(ctx *Context, message Message) {
 	for {
 		t.count++
 	}
+}
+
+func (t *TestActor) Init(ctx *Context) {
+
 }
 
 func TestActorSpawn(t *testing.T) {

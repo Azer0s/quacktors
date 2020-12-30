@@ -21,7 +21,7 @@ func init() {
 
 	b, err := msgpack.Marshal(qpmd.Request{
 		RequestType: qpmd.REQUEST_HELLO,
-		Data: map[string]interface{}{},
+		Data:        map[string]interface{}{},
 	})
 	try(err)
 
@@ -37,7 +37,7 @@ func init() {
 	try(err)
 }
 
-func qpmdLookup(system, remoteAddress string, remotePort int) (error) {
+func qpmdLookup(system, remoteAddress string, remotePort int) (RemoteSystem, error) {
 	port := qpmdPort
 
 	if remotePort != 0 {
@@ -46,7 +46,7 @@ func qpmdLookup(system, remoteAddress string, remotePort int) (error) {
 
 	conn, err := net.Dial("tcp", fmt.Sprintf("%s:%d", remoteAddress, port))
 	if err != nil {
-		return err
+		return RemoteSystem{}, err
 	}
 
 	b, err := msgpack.Marshal(qpmd.Request{
@@ -56,27 +56,29 @@ func qpmdLookup(system, remoteAddress string, remotePort int) (error) {
 		},
 	})
 	if err != nil {
-		return err
+		return RemoteSystem{}, err
 	}
 
 	_, err = conn.Write(b)
 	if err != nil {
-		return err
+		return RemoteSystem{}, err
 	}
 
 	buf := make([]byte, 4096)
 	_, err = conn.Read(buf)
 	if err != nil {
-		return err
+		return RemoteSystem{}, err
 	}
 
 	res := qpmd.Response{}
 	err = msgpack.Unmarshal(buf, &res)
 	if err != nil {
-		return err
+		return RemoteSystem{}, err
 	}
 
-	//TODO: Return response in specific dao
-
-	return nil
+	return RemoteSystem{
+		Address:   remoteAddress,
+		Port:      res.Data[qpmd.PORT].(uint16),
+		MachineId: res.Data[qpmd.MACHINE_ID].(string),
+	}, nil
 }

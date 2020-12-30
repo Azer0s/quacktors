@@ -1,7 +1,17 @@
 package quacktors
 
 type Message interface {
-	Serialize() string
-	Deserialize(string) Message
 	Type() string
+}
+
+type DownMessage struct {
+	Who *Pid
+}
+
+func (d *DownMessage) Type() string {
+	return "DownMessage"
+}
+
+func init() {
+	RegisterType(&DownMessage{})
 }
