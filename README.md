@@ -4,37 +4,42 @@
 
 ![Github Action](https://github.com/Azer0s/quacktors/workflows/Go/badge.svg) ![Go Report Card](https://goreportcard.com/badge/github.com/Azer0s/quacktors) [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://github.com/Azer0s/quacktors/blob/master/LICENSE.md)
 
-quacktors or "quick actors" is a Go framework that brings Erlang/Elixir style concurrency to Go! It allows for message passing, actor monitoring and can even deal with remote actors/systems. Furthermore, it comes with plenty of useful standard modules for building actor model systems (like Supervisors, Genservers, etc.). Oh and there's more: quacktors is super easy to use!
+quacktors or "quick actors" is a Go framework that brings Erlang/Elixir style concurrency to Go! It allows for message passing, actor monitoring and can even deal with remote actors/systems. Furthermore, it comes with plenty of useful standard modules for building actor model systems (like Supervisors, Genservers, etc.). Oh and btw: quacktors is super easy to use!
 
-```swift
-main := quacktors.Self()
-pid := quacktors.Spawn(func() {
-    quacktors.Send(main, "Hello, quacktors!")
+```go
+rootCtx := quacktors.RootContext()
+
+pid := quacktors.Spawn(func(ctx *Context, message Message) {
+    fmt.Println("Hello, quacktors!")
 })
-msg := quacktors.Receive()
-fmt.Println(msg)
+
+rootCtx.Send(pid, &EmptyMessage{})
 ```
 
 <br>
 
 ### Getting started
 
-```swift
-quacktors.StartGateway(5521)
+```go
 foo := quacktors.NewSystem("foo")
 
-pid := quacktors.Spawn(func() {
-    for {
-        fmt.Println(quacktors.Receive())
+pid := quacktors.Spawn(func(ctx *Context, message Message) {
+    switch m := message.(type) {
+    case *GenericMessage:
+        fmt.Println(m.Value)
     }
 })
 
 foo.HandleRemote("printer", pid)
+
+quacktors.Wait()
 ```
 
-```swift
-node := quacktors.Connect("foo@127.0.0.1:5521")
-printer := node.Remote("printer")
+```go
+rootCtx := quacktors.RootContext()
 
-quacktors.Send(printer, "Hello, world")
+node := quacktors.Connect("foo@localhost")
+printer, ok := node.Remote("printer")
+
+rootCtx.Send(printer, &GenericMessage{Value: "Hello, world"})
 ```

@@ -28,6 +28,13 @@ func (g *GenericMessage) Type() string {
 	return "GenericMessage"
 }
 
+type EmptyMessage struct {
+}
+
+func (e *EmptyMessage) Type() string {
+	return "EmptyMessage"
+}
+
 func init() {
 	RegisterType(&DownMessage{})
 	RegisterType(&PoisonPill{})
