@@ -5,6 +5,7 @@ import "sync"
 var machineId = ""
 var pidMap = make(map[string]*Pid)
 var pidMapMu = &sync.RWMutex{}
+var systemWg = &sync.WaitGroup{}
 
 func init() {
 	machineId = uuidString()
@@ -16,6 +17,8 @@ func registerPid(pid *Pid) {
 
 	pid.Id = uuidString()
 	pidMap[pid.Id] = pid
+
+	systemWg.Add(1)
 }
 
 func deletePid(pidId string) {
@@ -23,6 +26,8 @@ func deletePid(pidId string) {
 	defer pidMapMu.Unlock()
 
 	delete(pidMap, pidId)
+
+	systemWg.Done()
 }
 
 func getByPidId(pidId string) (*Pid, bool) {
@@ -32,6 +37,10 @@ func getByPidId(pidId string) (*Pid, bool) {
 	v, ok := pidMap[pidId]
 
 	return v, ok
+}
+
+func Wait() {
+	systemWg.Wait()
 }
 
 func MachineId() string {

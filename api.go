@@ -1,6 +1,13 @@
 package quacktors
 
+import "reflect"
+
 func RegisterType(message Message) {
+	t := reflect.ValueOf(message).Type().Kind()
+
+	if t != reflect.Ptr {
+		panic("RegisterType has to be called with a pointer to a Message!")
+	}
 	storeType(message)
 }
 

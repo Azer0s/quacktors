@@ -14,6 +14,11 @@ func (c *Context) Send(to *Pid, message Message) {
 
 func (c *Context) Kill(pid *Pid) {
 	go func() {
+		if pid.MachineId != machineId {
+			//TODO: send kill message to foreign machine
+			return
+		}
+
 		pid.quitChanMu.RLock()
 		defer pid.quitChanMu.RUnlock()
 
@@ -30,6 +35,11 @@ func (c *Context) Quit() {
 }
 
 func (c *Context) Monitor(pid *Pid) Abortable {
+	if pid.MachineId != machineId {
+		//TODO: send monitor request to other machine
+		return nil //RemoteMonitorAbortable
+	}
+
 	pid.monitorChanMu.RLock()
 	defer pid.monitorChanMu.RUnlock()
 

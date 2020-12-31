@@ -25,9 +25,11 @@ func doSend(to *Pid, message Message) {
 			return
 		}
 
+		//Lock the channel so we don't run into problems if we're in the middle of an actor quit
 		to.messageChanMu.RLock()
 		defer to.messageChanMu.RUnlock()
 
+		//If the actor has already quit, do nothing
 		if to.messageChan == nil {
 			return
 		}
@@ -40,9 +42,9 @@ func cleanupActor(pid *Pid) {
 	deletePid(pid.Id)
 
 	//Terminate all scheduled events/send down message to monitor tasks
-	for n, c := range pid.scheduled {
-		c <- true //this is blocking
-		close(c)
+	for n, ch := range pid.scheduled {
+		ch <- true //this is blocking
+		close(ch)
 		delete(pid.scheduled, n)
 	}
 
@@ -133,7 +135,13 @@ func startActor(actor Actor) *Pid {
 			case <-quitChan:
 				return
 			case message := <-messageChan:
-				actor.Run(ctx, message)
+				switch message.(type) {
+				case *PoisonPill:
+					//Quit actor on PoisonPill message
+					return
+				default:
+					actor.Run(ctx, message)
+				}
 			case monitor := <-monitorChan:
 				setupMonitor(pid, monitor)
 			case monitor := <-demonitorChan:
