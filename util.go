@@ -10,6 +10,11 @@ import (
 	"time"
 )
 
+type remoteMonitorTuple struct {
+	from *Pid
+	to   *Pid
+}
+
 func try(err error) {
 	if err != nil {
 		panic(err)

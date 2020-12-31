@@ -15,7 +15,12 @@ func (c *Context) Send(to *Pid, message Message) {
 func (c *Context) Kill(pid *Pid) {
 	go func() {
 		if pid.MachineId != machineId {
-			//TODO: send kill message to foreign machine
+			m, ok := getMachine(pid.MachineId)
+
+			if ok {
+				m.quitChan <- pid
+			}
+
 			return
 		}
 
@@ -35,22 +40,45 @@ func (c *Context) Quit() {
 }
 
 func (c *Context) Monitor(pid *Pid) Abortable {
-	if pid.MachineId != machineId {
-		//TODO: send monitor request to other machine
-		return nil //RemoteMonitorAbortable
-	}
+	errorChan := make(chan bool)
+	okChan := make(chan bool)
 
-	pid.monitorChanMu.RLock()
-	defer pid.monitorChanMu.RUnlock()
+	go func() {
+		if pid.MachineId != machineId {
+			m, ok := getMachine(pid.MachineId)
+			if ok {
+				okChan <- true
 
-	if pid.monitorChan == nil {
+				m.monitorChan <- remoteMonitorTuple{from: c.self, to: pid}
+				return
+			}
+
+			errorChan <- true
+		} else {
+			pid.monitorChanMu.RLock()
+			defer pid.monitorChanMu.RUnlock()
+
+			if pid.monitorChan == nil {
+				errorChan <- true
+				return
+			}
+
+			okChan <- true
+
+			pid.monitorChan <- c.self
+		}
+	}()
+
+	select {
+	case <-okChan:
+		return &MonitorAbortable{
+			pid:  pid,
+			self: c.self,
+		}
+	case <-errorChan:
+		//Either the remote machine disconnected or the actor is already dead.
+		//Either way, send a down message
+		doSend(c.self, &DownMessage{Who: pid})
 		return &NoopAbortable{}
-	}
-
-	pid.monitorChan <- c.self
-
-	return &MonitorAbortable{
-		pid:  pid,
-		self: c.self,
 	}
 }

@@ -45,6 +45,15 @@ func registerMachine(machine *machine) {
 	machines[machine.machineId] = machine
 }
 
+func getMachine(machineId string) (*machine, bool) {
+	machinesMu.RLock()
+	defer machinesMu.RUnlock()
+
+	v, ok := machines[machineId]
+
+	return v, ok
+}
+
 func Wait() {
 	systemWg.Wait()
 }

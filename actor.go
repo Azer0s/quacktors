@@ -21,7 +21,14 @@ func (s *StatelessActor) Run(ctx *Context, message Message) {
 func doSend(to *Pid, message Message) {
 	go func() {
 		if to.MachineId != machineId {
-			//TODO: send to other machine
+			//Pid is not on this machine
+
+			m, ok := getMachine(to.MachineId)
+
+			if ok {
+				m.messageChan <- message
+			}
+
 			return
 		}
 
@@ -40,21 +47,6 @@ func doSend(to *Pid, message Message) {
 
 func cleanupActor(pid *Pid) {
 	deletePid(pid.Id)
-
-	//Terminate all scheduled events/send down message to monitor tasks
-	for n, ch := range pid.scheduled {
-		ch <- true //this is blocking
-		close(ch)
-		delete(pid.scheduled, n)
-	}
-
-	//Delete monitorQuitChannels
-	for n, c := range pid.monitorQuitChannels {
-		close(c)
-		delete(pid.monitorQuitChannels, n)
-	}
-
-	pid.monitorQuitChannels = nil
 
 	pid.quitChanMu.Lock()
 	close(pid.quitChan)
@@ -75,9 +67,29 @@ func cleanupActor(pid *Pid) {
 	close(pid.demonitorChan)
 	pid.demonitorChan = nil
 	pid.demonitorChanMu.Unlock()
+
+	//Terminate all scheduled events/send down message to monitor tasks
+	pid.monitorSetupMu.Lock()
+	for n, ch := range pid.scheduled {
+		ch <- true //this is blocking
+		close(ch)
+		delete(pid.scheduled, n)
+	}
+
+	//Delete monitorQuitChannels
+	for n, c := range pid.monitorQuitChannels {
+		close(c)
+		delete(pid.monitorQuitChannels, n)
+	}
+	pid.monitorSetupMu.Unlock()
+
+	pid.monitorQuitChannels = nil
 }
 
 func setupMonitor(pid *Pid, monitor *Pid) {
+	pid.monitorSetupMu.Lock()
+	defer pid.monitorSetupMu.Unlock()
+
 	monitorChannel := make(chan bool)
 	pid.scheduled[monitor.String()] = monitorChannel
 
@@ -95,6 +107,9 @@ func setupMonitor(pid *Pid, monitor *Pid) {
 }
 
 func removeMonitor(pid *Pid, monitor *Pid) {
+	pid.monitorSetupMu.Lock()
+	defer pid.monitorSetupMu.Unlock()
+
 	name := monitor.String()
 
 	pid.monitorQuitChannels[name] <- true

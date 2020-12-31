@@ -5,6 +5,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"sync"
 	"testing"
+	"time"
 )
 
 func TestMonitorWithKill(t *testing.T) {
@@ -27,6 +28,8 @@ func TestMonitorWithKill(t *testing.T) {
 			ctx.Quit()
 		}
 	})
+
+	<-time.After(50 * time.Millisecond)
 
 	rootCtx.Kill(p)
 
@@ -54,7 +57,67 @@ func TestMonitorWithPoisonPill(t *testing.T) {
 		}
 	})
 
+	<-time.After(50 * time.Millisecond)
+
 	rootCtx.Send(p, &PoisonPill{})
+
+	Wait()
+}
+
+func TestMonitorAbortable_Abort(t *testing.T) {
+	rootCtx := RootContext()
+
+	p := Spawn(func(ctx *Context, message Message) {
+		switch m := message.(type) {
+		case *GenericMessage:
+			fmt.Println(m.Value)
+		}
+	})
+
+	var a Abortable
+
+	q := SpawnWithInit(func(ctx *Context) {
+		a = ctx.Monitor(p)
+	}, func(ctx *Context, message Message) {
+		switch message.(type) {
+		case *DownMessage:
+			fmt.Println(":(")
+			t.Fail()
+		case *GenericMessage:
+			fmt.Println("Worked")
+			ctx.Quit()
+		}
+	})
+
+	a.Abort()
+
+	<-time.After(50 * time.Millisecond)
+
+	rootCtx.Send(p, &PoisonPill{})
+
+	rootCtx.Send(q, &GenericMessage{Value: ""})
+
+	Wait()
+}
+
+func TestMonitorDeadPid(t *testing.T) {
+	rootCtx := RootContext()
+
+	p := Spawn(func(ctx *Context, message Message) {
+	})
+
+	rootCtx.Kill(p)
+
+	<-time.After(50 * time.Millisecond)
+
+	SpawnWithInit(func(ctx *Context) {
+		ctx.Monitor(p)
+	}, func(ctx *Context, message Message) {
+		switch message.(type) {
+		case *DownMessage:
+			ctx.Quit()
+		}
+	})
 
 	Wait()
 }
@@ -68,8 +131,6 @@ func (t TestMessage) Type() string {
 }
 
 func TestTypeRegistration(t *testing.T) {
-	//qpmdLookup("foo", "127.0.0.1", 0)
-
 	RegisterType(&TestMessage{Foo: MachineId()})
 	v := getType(TestMessage{}.Type())
 

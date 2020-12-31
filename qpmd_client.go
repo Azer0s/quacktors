@@ -183,9 +183,14 @@ func qpmdLookup(system, remoteAddress string) (*RemoteSystem, error) {
 	machineData := res.Data[qpmd.MACHINE].(map[string]interface{})
 
 	m := &machine{
-		machineId:   machineData[qpmd.MACHINE_ID].(string),
-		gatewayPort: machineData[qpmd.MESSAGE_GATEWAY_PORT].(uint16),
-		gpPort:      machineData[qpmd.GP_GATEWAY_PORT].(uint16),
+		address:       remoteAddress,
+		machineId:     machineData[qpmd.MACHINE_ID].(string),
+		gatewayPort:   machineData[qpmd.MESSAGE_GATEWAY_PORT].(uint16),
+		gpPort:        machineData[qpmd.GP_GATEWAY_PORT].(uint16),
+		quitChan:      make(chan *Pid),
+		messageChan:   make(chan Message),
+		monitorChan:   make(chan remoteMonitorTuple),
+		demonitorChan: make(chan remoteMonitorTuple),
 	}
 
 	registerMachine(m)
