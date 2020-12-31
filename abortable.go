@@ -30,7 +30,6 @@ func (sa *SendAfterAbortable) Abort() {
 }
 
 type NoopAbortable struct {
-
 }
 
 func (na *NoopAbortable) Abort() {

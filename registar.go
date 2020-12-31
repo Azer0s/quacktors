@@ -2,14 +2,13 @@ package quacktors
 
 import "sync"
 
-var machineId = ""
+var machineId = uuidString()
 var pidMap = make(map[string]*Pid)
 var pidMapMu = &sync.RWMutex{}
 var systemWg = &sync.WaitGroup{}
 
-func init() {
-	machineId = uuidString()
-}
+var machines = map[string]*machine{}
+var machinesMu = &sync.RWMutex{}
 
 func registerPid(pid *Pid) {
 	pidMapMu.Lock()
@@ -37,6 +36,13 @@ func getByPidId(pidId string) (*Pid, bool) {
 	v, ok := pidMap[pidId]
 
 	return v, ok
+}
+
+func registerMachine(machine *machine) {
+	machinesMu.Lock()
+	defer machinesMu.Unlock()
+
+	machines[machine.machineId] = machine
 }
 
 func Wait() {

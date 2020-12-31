@@ -1,6 +1,12 @@
 package quacktors
 
-import "reflect"
+import (
+	"errors"
+	"reflect"
+	"regexp"
+	"strings"
+	"sync"
+)
 
 func RegisterType(message Message) {
 	t := reflect.ValueOf(message).Type().Kind()
@@ -17,7 +23,7 @@ func RootContext() Context {
 
 func Spawn(action func(ctx *Context, message Message)) *Pid {
 	return startActor(&StatelessActor{
-		initFunction: func(ctx *Context) {},
+		initFunction:    func(ctx *Context) {},
 		receiveFunction: action,
 	})
 }
@@ -33,20 +39,53 @@ func SpawnStateful(actor Actor) *Pid {
 	return startActor(actor)
 }
 
-func NewSystem(name string) (System, error) {
-	//port, err := startServer()
+func NewSystem(name string) (*System, error) {
+	s := &System{
+		name:              name,
+		handlers:          map[string]*Pid{},
+		handlersMu:        &sync.RWMutex{},
+		quitChan:          make(chan bool),
+		heartbeatQuitChan: make(chan bool),
+	}
+	p, err := s.startServer()
 
-	//conn, err := qpmdRegister(name, port)
-	//qpmdHeartbeat(conn)
-	return System{}, nil
+	if err != nil {
+		return &System{}, err
+	}
+
+	conn, err := qpmdRegister(s, p)
+
+	if err != nil {
+		return &System{}, err
+	}
+
+	qpmdHeartbeat(conn, s)
+
+	return s, nil
 }
 
-func Connect(name string) RemoteSystem {
-	//disconnectChan := make(chan bool)
+func Connect(name string) (*RemoteSystem, error) {
+	matched, err := regexp.MatchString("(\\w+)@(.+)", name)
 
-	//qpmdLookup()
-	//remoteSystemHello()
-	//remoteSystemConnection(disconnectChan)
+	if !matched || err != nil {
+		return &RemoteSystem{}, errors.New("invalid connection string format")
+	}
 
-	return RemoteSystem{}
+	s := strings.SplitN(name, "@", 2)
+
+	r, err := qpmdLookup(s[0], s[1])
+
+	if err != nil {
+		return &RemoteSystem{}, err
+	}
+
+	err = r.sayHello()
+
+	if err != nil {
+		return &RemoteSystem{}, err
+	}
+
+	//TODO: start connections to remote machine if they don't exist yet
+
+	return r, nil
 }

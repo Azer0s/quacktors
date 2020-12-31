@@ -3,6 +3,7 @@ package quacktors
 import (
 	"fmt"
 	"github.com/stretchr/testify/assert"
+	"sync"
 	"testing"
 )
 
@@ -58,7 +59,6 @@ func TestMonitorWithPoisonPill(t *testing.T) {
 	Wait()
 }
 
-
 type TestMessage struct {
 	Foo string
 }
@@ -74,12 +74,56 @@ func TestTypeRegistration(t *testing.T) {
 	v := getType(TestMessage{}.Type())
 
 	assert.Empty(t, v.(TestMessage).Foo)
+}
 
-	//s, err := NewSystem("test")
-//
-	//if err != nil {
-	//	panic(err)
-	//}
+func TestNewSystem(t *testing.T) {
+	_, err := NewSystem("test")
+
+	if err != nil {
+		panic(err)
+	}
+
+	wg := sync.WaitGroup{}
+	wg.Add(1)
+	wg.Wait()
+}
+
+func TestNewSystemWithHandler(t *testing.T) {
+	s, err := NewSystem("test")
+
+	if err != nil {
+		panic(err)
+	}
+
+	p := Spawn(func(ctx *Context, message Message) {
+		switch m := message.(type) {
+		case *GenericMessage:
+			fmt.Println(m.Value)
+			ctx.Quit()
+		}
+	})
+
+	s.HandleRemote("printer", p)
+
+	Wait()
+}
+
+func TestConnect(t *testing.T) {
+	rootCtx := RootContext()
+
+	r, err := Connect("test@localhost")
+
+	if err != nil {
+		t.Fail()
+	}
+
+	p, err := r.Remote("printer")
+
+	if err != nil {
+		t.Fail()
+	}
+
+	rootCtx.Send(p, &GenericMessage{Value: "Hello!"})
 }
 
 type TestActor struct {

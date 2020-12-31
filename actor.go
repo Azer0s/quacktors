@@ -6,7 +6,7 @@ type Actor interface {
 }
 
 type StatelessActor struct {
-	initFunction func(ctx *Context)
+	initFunction    func(ctx *Context)
 	receiveFunction func(ctx *Context, message Message)
 }
 
@@ -86,9 +86,9 @@ func setupMonitor(pid *Pid, monitor *Pid) {
 
 	go func() {
 		select {
-		case <- monitorQuitChannel:
+		case <-monitorQuitChannel:
 			return
-		case <- monitorChannel:
+		case <-monitorChannel:
 			doSend(monitor, &DownMessage{Who: pid})
 		}
 	}()
