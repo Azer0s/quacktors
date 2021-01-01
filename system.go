@@ -9,7 +9,7 @@ import (
 )
 
 const handler = "handler"
-const pid = "pid"
+const pidVal = "pid"
 
 type System struct {
 	name              string
@@ -90,8 +90,9 @@ func (s *System) handleClient(conn net.Conn) {
 
 	switch req.RequestType {
 	case qpmd.REQUEST_HELLO:
+		//I'll leave the hello message for now. Maybe it'll be useful in the future
+		//(plus it's more consistent to machine to machine communication)
 		_ = writeOk(conn, map[string]interface{}{})
-		//TODO: start connections to remote machine
 	case qpmd.REQUEST_LOOKUP:
 		s.handlersMu.RLock()
 		defer s.handlersMu.RUnlock()
@@ -100,7 +101,7 @@ func (s *System) handleClient(conn net.Conn) {
 
 		if ok {
 			_ = writeOk(conn, map[string]interface{}{
-				pid: h,
+				pidVal: h,
 			})
 
 			return

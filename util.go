@@ -33,6 +33,40 @@ func createFromTemplateMessage(from Message) Message {
 	return ms
 }
 
+func sendRequest(conn net.Conn, req qpmd.Request) error {
+	b, err := msgpack.Marshal(req)
+
+	if err != nil {
+		return err
+	}
+
+	_, err = conn.Write(b)
+
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func readResponse(conn net.Conn) (qpmd.Response, error) {
+	buf := make([]byte, 4096)
+	n, err := conn.Read(buf)
+
+	if err != nil {
+		return qpmd.Response{}, err
+	}
+
+	res := qpmd.Response{}
+	err = msgpack.Unmarshal(buf[:n], &res)
+
+	if err != nil {
+		return qpmd.Response{}, err
+	}
+
+	return res, nil
+}
+
 func readRequest(conn net.Conn) (qpmd.Request, error) {
 	buf := make([]byte, 4096)
 	n, err := conn.Read(buf)
@@ -43,10 +77,14 @@ func readRequest(conn net.Conn) (qpmd.Request, error) {
 	req := qpmd.Request{}
 	err = msgpack.Unmarshal(buf[:n], &req)
 
+	if err != nil {
+		return qpmd.Request{}, err
+	}
+
 	return req, nil
 }
 
-func writeResponse(client net.Conn, response qpmd.Response) error {
+func sendResponse(client net.Conn, response qpmd.Response) error {
 	response.Data[qpmd.TIMESTAMP] = time.Now().Unix()
 
 	b, err := msgpack.Marshal(response)
@@ -65,7 +103,7 @@ func writeResponse(client net.Conn, response qpmd.Response) error {
 }
 
 func writeError(client net.Conn, err error) error {
-	return writeResponse(client, qpmd.Response{
+	return sendResponse(client, qpmd.Response{
 		ResponseType: qpmd.RESPONSE_ERROR,
 		Data: map[string]interface{}{
 			"error": err.Error(),
@@ -74,7 +112,7 @@ func writeError(client net.Conn, err error) error {
 }
 
 func writeOk(client net.Conn, data map[string]interface{}) error {
-	return writeResponse(client, qpmd.Response{
+	return sendResponse(client, qpmd.Response{
 		ResponseType: qpmd.RESPONSE_OK,
 		Data:         data,
 	})

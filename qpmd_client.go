@@ -63,7 +63,7 @@ func qpmdRegister(system *System, systemPort uint16) (net.Conn, error) {
 		return nil, err
 	}
 
-	b, err := msgpack.Marshal(qpmd.Request{
+	err = sendRequest(conn, qpmd.Request{
 		RequestType: qpmd.REQUEST_REGISTER,
 		Data: map[string]interface{}{
 			qpmd.SYSTEM_NAME: system.name,
@@ -71,23 +71,12 @@ func qpmdRegister(system *System, systemPort uint16) (net.Conn, error) {
 			qpmd.MACHINE_ID:  machineId,
 		},
 	})
+
 	if err != nil {
 		return nil, err
 	}
 
-	_, err = conn.Write(b)
-	if err != nil {
-		return nil, err
-	}
-
-	buf := make([]byte, 4096)
-	_, err = conn.Read(buf)
-	if err != nil {
-		return nil, err
-	}
-
-	res := qpmd.Response{}
-	err = msgpack.Unmarshal(buf, &res)
+	res, err := readResponse(conn)
 	if err != nil {
 		return nil, err
 	}
@@ -111,34 +100,18 @@ func qpmdHeartbeat(conn net.Conn, system *System) {
 			case <-system.heartbeatQuitChan:
 				return
 			case <-time.After(25 * time.Second):
-				req := qpmd.Request{
+				err := sendRequest(conn, qpmd.Request{
 					RequestType: qpmd.HEARTBEAT,
 					Data:        map[string]interface{}{},
-				}
-				b, err := msgpack.Marshal(req)
-
+				})
 				if err != nil {
 					quit()
 					return
 				}
 
-				_, err = conn.Write(b)
-				if err != nil {
-					quit()
-					return
-				}
+				res, err := readResponse(conn)
 
-				buf := make([]byte, 4096)
-				n, err := conn.Read(buf)
-				if n == 0 || err != nil {
-					quit()
-					return
-				}
-
-				res := qpmd.Response{}
-				err = msgpack.Unmarshal(buf[:n], &res)
-
-				if res.ResponseType != qpmd.RESPONSE_OK {
+				if err != nil || res.ResponseType != qpmd.RESPONSE_OK {
 					quit()
 					return
 				}
@@ -153,7 +126,7 @@ func qpmdLookup(system, remoteAddress string) (*RemoteSystem, error) {
 		return &RemoteSystem{}, err
 	}
 
-	b, err := msgpack.Marshal(qpmd.Request{
+	err = sendRequest(conn, qpmd.Request{
 		RequestType: qpmd.REQUEST_LOOKUP,
 		Data: map[string]interface{}{
 			"system": system,
@@ -163,41 +136,24 @@ func qpmdLookup(system, remoteAddress string) (*RemoteSystem, error) {
 		return &RemoteSystem{}, err
 	}
 
-	_, err = conn.Write(b)
-	if err != nil {
-		return &RemoteSystem{}, err
-	}
-
-	buf := make([]byte, 4096)
-	_, err = conn.Read(buf)
-	if err != nil {
-		return &RemoteSystem{}, err
-	}
-
-	res := qpmd.Response{}
-	err = msgpack.Unmarshal(buf, &res)
+	res, err := readResponse(conn)
 	if err != nil {
 		return &RemoteSystem{}, err
 	}
 
 	machineData := res.Data[qpmd.MACHINE].(map[string]interface{})
 
-	m := &machine{
-		address:       remoteAddress,
-		machineId:     machineData[qpmd.MACHINE_ID].(string),
-		gatewayPort:   machineData[qpmd.MESSAGE_GATEWAY_PORT].(uint16),
-		gpPort:        machineData[qpmd.GP_GATEWAY_PORT].(uint16),
-		quitChan:      make(chan *Pid),
-		messageChan:   make(chan Message),
-		monitorChan:   make(chan remoteMonitorTuple),
-		demonitorChan: make(chan remoteMonitorTuple),
+	m := &Machine{
+		Address:            remoteAddress,
+		MachineId:          machineData[qpmd.MACHINE_ID].(string),
+		MessageGatewayPort: machineData[qpmd.MESSAGE_GATEWAY_PORT].(uint16),
+		GeneralPurposePort: machineData[qpmd.GP_GATEWAY_PORT].(uint16),
 	}
-
-	registerMachine(m)
 
 	return &RemoteSystem{
 		Address:   remoteAddress,
 		Port:      res.Data[qpmd.PORT].(uint16),
-		MachineId: m.machineId,
+		MachineId: m.MachineId,
+		Machine:   m,
 	}, nil
 }

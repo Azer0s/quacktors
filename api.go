@@ -79,13 +79,25 @@ func Connect(name string) (*RemoteSystem, error) {
 		return &RemoteSystem{}, err
 	}
 
+	if m, ok := getMachine(r.MachineId); ok {
+		r.Machine = m
+	} else {
+		//start connections to remote machine
+
+		err := r.Machine.connect()
+
+		if err != nil {
+			return &RemoteSystem{}, err
+		}
+
+		registerMachine(r.Machine)
+	}
+
 	err = r.sayHello()
 
 	if err != nil {
 		return &RemoteSystem{}, err
 	}
-
-	//TODO: start connections to remote machine if they don't exist yet
 
 	return r, nil
 }

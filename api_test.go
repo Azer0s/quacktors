@@ -178,6 +178,32 @@ func TestConnect(t *testing.T) {
 		t.Fail()
 	}
 
+	wg := sync.WaitGroup{}
+	wg.Add(1)
+	wg.Wait()
+
+	p, err := r.Remote("printer")
+
+	if err != nil {
+		t.Fail()
+	}
+
+	rootCtx.Send(p, &GenericMessage{Value: "Hello!"})
+}
+
+func TestConnect2(t *testing.T) {
+	rootCtx := RootContext()
+
+	r, err := Connect("test@localhost")
+
+	if err != nil {
+		t.Fail()
+	}
+
+	wg := sync.WaitGroup{}
+	wg.Add(1)
+	wg.Wait()
+
 	p, err := r.Remote("printer")
 
 	if err != nil {
