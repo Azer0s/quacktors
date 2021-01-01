@@ -11,8 +11,13 @@ import (
 )
 
 type remoteMonitorTuple struct {
-	from *Pid
-	to   *Pid
+	From *Pid
+	To   *Pid
+}
+
+type remoteMessageTuple struct {
+	To      *Pid
+	Message Message
 }
 
 func try(err error) {

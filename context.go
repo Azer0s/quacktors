@@ -1,5 +1,7 @@
 package quacktors
 
+import "go.uber.org/zap"
+
 type Context struct {
 	self *Pid
 }
@@ -15,11 +17,22 @@ func (c *Context) Send(to *Pid, message Message) {
 func (c *Context) Kill(pid *Pid) {
 	go func() {
 		if pid.MachineId != machineId {
+			logger.Debug("pid to kill is not on this machine, forwarding to remote machine",
+				zap.String("target_pid", pid.String()),
+				zap.String("machine_id", pid.MachineId),
+			)
+
 			m, ok := getMachine(pid.MachineId)
 
 			if ok {
 				m.quitChan <- pid
+				return
 			}
+
+			logger.Warn("remote machine is not registered, couldn't kill pid",
+				zap.String("target_pid", pid.String()),
+				zap.String("machine_id", pid.MachineId),
+			)
 
 			return
 		}
@@ -45,13 +58,25 @@ func (c *Context) Monitor(pid *Pid) Abortable {
 
 	go func() {
 		if pid.MachineId != machineId {
+			logger.Debug("pid to monitor is not on this machine, forwarding to remote machine",
+				zap.String("monitored_pid", pid.String()),
+				zap.String("monitor_pid", c.self.String()),
+				zap.String("machine_id", pid.MachineId),
+			)
+
 			m, ok := getMachine(pid.MachineId)
 			if ok {
 				okChan <- true
 
-				m.monitorChan <- remoteMonitorTuple{from: c.self, to: pid}
+				m.monitorChan <- remoteMonitorTuple{From: c.self, To: pid}
 				return
 			}
+
+			logger.Warn("remote machine is not registered, couldn't monitor pid",
+				zap.String("monitored_pid", pid.String()),
+				zap.String("monitor_pid", c.self.String()),
+				zap.String("machine_id", pid.MachineId),
+			)
 
 			errorChan <- true
 		} else {

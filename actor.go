@@ -1,5 +1,7 @@
 package quacktors
 
+import "go.uber.org/zap"
+
 type Actor interface {
 	Init(ctx *Context)
 	Run(ctx *Context, message Message)
@@ -26,7 +28,10 @@ func doSend(to *Pid, message Message) {
 			m, ok := getMachine(to.MachineId)
 
 			if ok {
-				m.messageChan <- message
+				m.messageChan <- remoteMessageTuple{
+					To:      to,
+					Message: message,
+				}
 			}
 
 			return
@@ -45,82 +50,6 @@ func doSend(to *Pid, message Message) {
 	}()
 }
 
-func cleanupActor(pid *Pid) {
-	deletePid(pid.Id)
-
-	pid.quitChanMu.Lock()
-	close(pid.quitChan)
-	pid.quitChan = nil
-	pid.quitChanMu.Unlock()
-
-	pid.messageChanMu.Lock()
-	close(pid.messageChan)
-	pid.messageChan = nil
-	pid.messageChanMu.Unlock()
-
-	pid.monitorChanMu.Lock()
-	close(pid.monitorChan)
-	pid.monitorChan = nil
-	pid.monitorChanMu.Unlock()
-
-	pid.demonitorChanMu.Lock()
-	close(pid.demonitorChan)
-	pid.demonitorChan = nil
-	pid.demonitorChanMu.Unlock()
-
-	//Terminate all scheduled events/send down message to monitor tasks
-	pid.monitorSetupMu.Lock()
-	for n, ch := range pid.scheduled {
-		ch <- true //this is blocking
-		close(ch)
-		delete(pid.scheduled, n)
-	}
-
-	//Delete monitorQuitChannels
-	for n, c := range pid.monitorQuitChannels {
-		close(c)
-		delete(pid.monitorQuitChannels, n)
-	}
-	pid.monitorSetupMu.Unlock()
-
-	pid.monitorQuitChannels = nil
-}
-
-func setupMonitor(pid *Pid, monitor *Pid) {
-	pid.monitorSetupMu.Lock()
-	defer pid.monitorSetupMu.Unlock()
-
-	monitorChannel := make(chan bool)
-	pid.scheduled[monitor.String()] = monitorChannel
-
-	monitorQuitChannel := make(chan bool)
-	pid.monitorQuitChannels[monitor.String()] = monitorQuitChannel
-
-	go func() {
-		select {
-		case <-monitorQuitChannel:
-			return
-		case <-monitorChannel:
-			doSend(monitor, &DownMessage{Who: pid})
-		}
-	}()
-}
-
-func removeMonitor(pid *Pid, monitor *Pid) {
-	pid.monitorSetupMu.Lock()
-	defer pid.monitorSetupMu.Unlock()
-
-	name := monitor.String()
-
-	pid.monitorQuitChannels[name] <- true
-
-	close(pid.monitorQuitChannels[name])
-	close(pid.scheduled[name])
-
-	delete(pid.monitorQuitChannels, name)
-	delete(pid.scheduled, name)
-}
-
 func startActor(actor Actor) *Pid {
 	quitChan := make(chan bool)             //channel to quit
 	messageChan := make(chan Message, 2000) //channel for messages
@@ -131,36 +60,39 @@ func startActor(actor Actor) *Pid {
 	monitorQuitChannels := make(map[string]chan bool)
 
 	pid := createPid(quitChan, messageChan, monitorChan, demonitorChan, scheduled, monitorQuitChannels)
-	registerPid(pid)
-
 	ctx := &Context{self: pid}
 
 	actor.Init(ctx)
+
+	logger.Info("starting actor", zap.String("pid", pid.String()))
 
 	go func() {
 		defer func() {
 			//We don't want to forward a panic
 			recover()
-
-			cleanupActor(pid)
+			pid.cleanup()
 		}()
 
 		for {
 			select {
 			case <-quitChan:
+				logger.Info("actor received quit event", zap.String("pid", pid.String()))
 				return
 			case message := <-messageChan:
 				switch message.(type) {
 				case *PoisonPill:
+					logger.Info("actor received poison pill", zap.String("pid", pid.String()))
 					//Quit actor on PoisonPill message
 					return
 				default:
 					actor.Run(ctx, message)
 				}
 			case monitor := <-monitorChan:
-				setupMonitor(pid, monitor)
+				logger.Info("actor received monitor request", zap.String("pid", pid.String()), zap.String("monitor", monitor.String()))
+				pid.setupMonitor(monitor)
 			case monitor := <-demonitorChan:
-				removeMonitor(pid, monitor)
+				logger.Info("actor received demonitor request", zap.String("pid", pid.String()), zap.String("monitor", monitor.String()))
+				pid.removeMonitor(monitor)
 			}
 		}
 	}()

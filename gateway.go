@@ -7,6 +7,8 @@ import (
 	"net"
 )
 
+//TODO: logging
+
 /*
 When connecting to a remote machine, quacktors works with two TCP streams
 One for messages and another one for system commands (monitor, demonitor, kill)

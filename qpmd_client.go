@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"github.com/Azer0s/qpmd"
 	"github.com/vmihailenco/msgpack/v5"
+	"go.uber.org/zap"
 	"net"
 	"time"
 )
@@ -58,6 +59,8 @@ func init() {
 }
 
 func qpmdRegister(system *System, systemPort uint16) (net.Conn, error) {
+	logger.Debug("registering system to qpmd", zap.String("system_name", system.name))
+
 	conn, err := net.Dial("tcp", fmt.Sprintf("localhost:%d", qpmdPort))
 	if err != nil {
 		return nil, err
@@ -121,6 +124,11 @@ func qpmdHeartbeat(conn net.Conn, system *System) {
 }
 
 func qpmdLookup(system, remoteAddress string) (*RemoteSystem, error) {
+	logger.Debug("looking up remote system in qpmd",
+		zap.String("system_name", system),
+		zap.String("remote_address", remoteAddress),
+	)
+
 	conn, err := net.Dial("tcp", fmt.Sprintf("%s:%d", remoteAddress, qpmdPort))
 	if err != nil {
 		return &RemoteSystem{}, err

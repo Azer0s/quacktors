@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"github.com/Azer0s/qpmd"
 	"github.com/vmihailenco/msgpack/v5"
+	"go.uber.org/zap"
 	"net"
 )
 
@@ -26,7 +27,7 @@ type Machine struct {
 	GeneralPurposePort uint16
 	gpQuitChan         chan bool
 	quitChan           chan<- *Pid
-	messageChan        chan<- Message
+	messageChan        chan<- remoteMessageTuple
 	monitorChan        chan<- remoteMonitorTuple
 	demonitorChan      chan<- remoteMonitorTuple
 	newConnectionChan  chan<- *Machine
@@ -35,6 +36,10 @@ type Machine struct {
 
 func (m *Machine) stop() {
 	go func() {
+		logger.Info("stopping connection to remote machine",
+			zap.String("machine_id", m.MachineId),
+		)
+
 		m.gatewayQuitChan <- true
 		m.gpQuitChan <- true
 
@@ -44,7 +49,11 @@ func (m *Machine) stop() {
 	}()
 }
 
-func startMessageClient(m *Machine, messageChan <-chan Message, gatewayQuitChan <-chan bool, okChan chan<- bool, errorChan chan<- error) {
+func startMessageClient(m *Machine, messageChan <-chan remoteMessageTuple, gatewayQuitChan <-chan bool, okChan chan<- bool, errorChan chan<- error) {
+	logger.Debug("starting message client for remote machine",
+		zap.String("machine_id", m.MachineId),
+	)
+
 	conn, err := net.Dial("tcp", fmt.Sprintf("%s:%d", m.Address, m.MessageGatewayPort))
 	if err != nil {
 		errorChan <- err
@@ -59,12 +68,22 @@ func startMessageClient(m *Machine, messageChan <-chan Message, gatewayQuitChan 
 			b, err := msgpack.Marshal(message)
 
 			if err != nil {
+				logger.Warn("there was an error while sending a message to a remote machine",
+					zap.String("receiver_pid", message.To.String()),
+					zap.String("machine_id", m.MachineId),
+					zap.Error(err),
+				)
 				m.stop()
 			}
 
 			_, err = conn.Write(b)
 
 			if err != nil {
+				logger.Warn("there was an error while sending a message to a remote machine",
+					zap.String("receiver_pid", message.To.String()),
+					zap.String("machine_id", m.MachineId),
+					zap.Error(err),
+				)
 				m.stop()
 			}
 		case <-gatewayQuitChan:
@@ -75,6 +94,10 @@ func startMessageClient(m *Machine, messageChan <-chan Message, gatewayQuitChan 
 }
 
 func startGpClient(m *Machine, gpQuitChan <-chan bool, quitChan <-chan *Pid, monitorChan <-chan remoteMonitorTuple, demonitorChan <-chan remoteMonitorTuple, newConnectionChan <-chan *Machine, okChan chan<- bool, errorChan chan<- error) {
+	logger.Debug("starting general purpose client for remote machine",
+		zap.String("machine_id", m.MachineId),
+	)
+
 	conn, err := net.Dial("tcp", fmt.Sprintf("%s:%d", m.Address, m.GeneralPurposePort))
 	if err != nil {
 		errorChan <- err
@@ -119,38 +142,60 @@ func startGpClient(m *Machine, gpQuitChan <-chan bool, quitChan <-chan *Pid, mon
 				},
 			})
 			if err != nil {
+				logger.Warn("there was an error while sending a kill command to a remote machine",
+					zap.String("target_pid", p.String()),
+					zap.String("machine_id", m.MachineId),
+					zap.Error(err),
+				)
 				m.stop()
 			}
 		case r := <-monitorChan:
 			err := sendRequest(conn, qpmd.Request{
 				RequestType: monitorMessageType,
 				Data: map[string]interface{}{
-					fromVal: r.from,
-					toVal:   r.to,
+					fromVal: r.From,
+					toVal:   r.To,
 				},
 			})
 			if err != nil {
+				logger.Warn("there was an error while sending a monitor request to a remote machine",
+					zap.String("monitor", r.From.String()),
+					zap.String("monitored_pid", r.To.String()),
+					zap.String("machine_id", m.MachineId),
+					zap.Error(err),
+				)
 				m.stop()
 			}
 		case r := <-demonitorChan:
 			err := sendRequest(conn, qpmd.Request{
 				RequestType: demonitorMessageType,
 				Data: map[string]interface{}{
-					fromVal: r.from,
-					toVal:   r.to,
+					fromVal: r.From,
+					toVal:   r.To,
 				},
 			})
 			if err != nil {
+				logger.Warn("there was an error while sending a demonitor request to a remote machine",
+					zap.String("monitor", r.From.String()),
+					zap.String("monitored_pid", r.To.String()),
+					zap.String("machine_id", m.MachineId),
+					zap.Error(err),
+				)
 				m.stop()
 			}
-		case m := <-newConnectionChan:
+		case machine := <-newConnectionChan:
 			err := sendRequest(conn, qpmd.Request{
 				RequestType: newConnectionMessageType,
 				Data: map[string]interface{}{
-					machineVal: m,
+					machineVal: machine,
 				},
 			})
 			if err != nil {
+				logger.Warn("there was an error while sending new connection information to a remote machine",
+					zap.String("new_machine_id", machine.MachineId),
+					zap.String("machine_id", m.MachineId),
+					zap.Error(err),
+				)
 				m.stop()
 			}
 		case <-gpQuitChan:
@@ -162,7 +207,7 @@ func startGpClient(m *Machine, gpQuitChan <-chan bool, quitChan <-chan *Pid, mon
 
 func (m *Machine) connect() error {
 	quitChan := make(chan *Pid, 100)
-	messageChan := make(chan Message, 100)
+	messageChan := make(chan remoteMessageTuple, 100)
 	monitorChan := make(chan remoteMonitorTuple, 100)
 	demonitorChan := make(chan remoteMonitorTuple, 100)
 	newConnectionChan := make(chan *Machine, 100)
@@ -183,10 +228,18 @@ func (m *Machine) connect() error {
 	errorChan := make(chan error)
 	okChan := make(chan bool)
 
+	logger.Info("connecting to a remote machine",
+		zap.String("machine_id", m.MachineId),
+	)
+
 	go startMessageClient(m, messageChan, gatewayQuitChan, okChan, errorChan)
 
 	select {
 	case err := <-errorChan:
+		logger.Warn("there was an error while connecting to a remote machine",
+			zap.String("machine_id", m.MachineId),
+			zap.Error(err),
+		)
 		return err
 	case <-okChan:
 		//everything went fine
@@ -197,10 +250,18 @@ func (m *Machine) connect() error {
 	select {
 	case err := <-errorChan:
 		gatewayQuitChan <- true
+		logger.Warn("there was an error while connecting to a remote machine",
+			zap.String("machine_id", m.MachineId),
+			zap.Error(err),
+		)
 		return err
 	case <-okChan:
 		//everything went fine
 	}
+
+	logger.Info("successfully established connection to a remote machine",
+		zap.String("machine_id", m.MachineId),
+	)
 
 	return nil
 }
