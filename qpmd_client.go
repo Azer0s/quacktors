@@ -4,62 +4,17 @@ import (
 	"errors"
 	"fmt"
 	"github.com/Azer0s/qpmd"
-	"github.com/vmihailenco/msgpack/v5"
-	"go.uber.org/zap"
+	"github.com/rs/zerolog/log"
 	"net"
 	"time"
 )
 
 var qpmdPort = 7161
-var messageGatewayPort = uint16(0)
-var gpGatewayPort = uint16(0)
-
-func init() {
-	failIfConnectionError := func(err error) {
-		if err != nil {
-			panic("Couldn't connect to qpmd! Is qpmd running?")
-		}
-	}
-
-	var err error
-
-	messageGatewayPort, err = startMessageGateway()
-	if err != nil {
-		panic(err)
-	}
-
-	gpGatewayPort, err = startGeneralPurposeGateway()
-	if err != nil {
-		panic(err)
-	}
-
-	conn, err := net.Dial("tcp", fmt.Sprintf("localhost:%d", qpmdPort))
-	failIfConnectionError(err)
-
-	b, err := msgpack.Marshal(qpmd.Request{
-		RequestType: qpmd.REQUEST_HELLO,
-		Data: map[string]interface{}{
-			qpmd.MACHINE_ID:           machineId,
-			qpmd.MESSAGE_GATEWAY_PORT: messageGatewayPort,
-			qpmd.GP_GATEWAY_PORT:      gpGatewayPort,
-		},
-	})
-	try(err)
-
-	_, err = conn.Write(b)
-	failIfConnectionError(err)
-
-	buf := make([]byte, 4096)
-	_, err = conn.Read(buf)
-	failIfConnectionError(err)
-
-	res := qpmd.Response{}
-	err = msgpack.Unmarshal(buf, &res)
-	try(err)
-}
 
 func qpmdRegister(system *System, systemPort uint16) (net.Conn, error) {
-	logger.Debug("registering system to qpmd", zap.String("system_name", system.name))
+	log.Debug().
+		Str("system_name", system.name).
+		Msg("registering system to qpmd")
 
 	conn, err := net.Dial("tcp", fmt.Sprintf("localhost:%d", qpmdPort))
 	if err != nil {
@@ -124,10 +79,10 @@ func qpmdHeartbeat(conn net.Conn, system *System) {
 }
 
 func qpmdLookup(system, remoteAddress string) (*RemoteSystem, error) {
-	logger.Debug("looking up remote system in qpmd",
-		zap.String("system_name", system),
-		zap.String("remote_address", remoteAddress),
-	)
+	log.Debug().
+		Str("system_name", system).
+		Str("remote_address", remoteAddress).
+		Msg("looking up remote system in qpmd")
 
 	conn, err := net.Dial("tcp", fmt.Sprintf("%s:%d", remoteAddress, qpmdPort))
 	if err != nil {

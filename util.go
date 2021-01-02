@@ -5,7 +5,6 @@ import (
 	uuid "github.com/satori/go.uuid"
 	"github.com/vmihailenco/msgpack/v5"
 	"net"
-	"reflect"
 	"strings"
 	"time"
 )
@@ -28,14 +27,6 @@ func try(err error) {
 
 func uuidString() string {
 	return strings.ReplaceAll(uuid.NewV4().String(), "-", "")
-}
-
-func createFromTemplateMessage(from Message) Message {
-	t := reflect.ValueOf(from).Elem()
-	typ := t.Type()
-	ms := (reflect.New(typ).Elem()).Interface().(Message)
-
-	return ms
 }
 
 func sendRequest(conn net.Conn, req qpmd.Request) error {

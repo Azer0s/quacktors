@@ -8,7 +8,7 @@ type DownMessage struct {
 	Who *Pid
 }
 
-func (d *DownMessage) Type() string {
+func (d DownMessage) Type() string {
 	return "DownMessage"
 }
 
@@ -16,7 +16,7 @@ type PoisonPill struct {
 	//PoisonPill message to kill actor
 }
 
-func (p *PoisonPill) Type() string {
+func (p PoisonPill) Type() string {
 	return "PoisonPill"
 }
 
@@ -24,19 +24,13 @@ type GenericMessage struct {
 	Value interface{}
 }
 
-func (g *GenericMessage) Type() string {
+func (g GenericMessage) Type() string {
 	return "GenericMessage"
 }
 
 type EmptyMessage struct {
 }
 
-func (e *EmptyMessage) Type() string {
+func (e EmptyMessage) Type() string {
 	return "EmptyMessage"
-}
-
-func init() {
-	RegisterType(&DownMessage{})
-	RegisterType(&PoisonPill{})
-	RegisterType(&GenericMessage{})
 }

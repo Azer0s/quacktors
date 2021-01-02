@@ -1,9 +1,13 @@
 package quacktors
 
 import (
+	"bytes"
+	"encoding/gob"
 	"encoding/json"
 	"errors"
 	"github.com/Azer0s/qpmd"
+	"github.com/rs/zerolog/log"
+	"github.com/vmihailenco/msgpack/v5"
 	"net"
 )
 
@@ -26,8 +30,68 @@ func startMessageGateway() (uint16, error) {
 		port := listener.Addr().(*net.TCPAddr).Port
 		portChan <- port
 
-		return
+		for {
+			conn, err := listener.Accept()
+			if err != nil {
+				_ = conn.Close()
+				continue
+			}
+
+			go handleMessageClient(conn)
+		}
 	})
+}
+
+func handleMessageClient(conn net.Conn) {
+	defer func() {
+		err := conn.Close()
+		if err != nil {
+			return
+		}
+	}()
+
+	for {
+		buf := make([]byte, 4096)
+		n, err := conn.Read(buf)
+		if n == 0 || err != nil {
+			return
+		}
+
+		msgData := map[string]interface{}{}
+
+		err = msgpack.Unmarshal(buf[:n], &msgData)
+		if err != nil {
+			return
+		}
+
+		go func(data map[string]interface{}) {
+			pidId := data[toVal].(string)
+			toPid, ok := getByPidId(pidId)
+
+			if !ok {
+				log.Warn().
+					Str("pid_id", pidId).
+					Msg("couldn't find pid id target of remote message on local system")
+				return
+			}
+
+			byteBuf := bytes.NewBuffer(data[messageVal].([]byte))
+			dec := gob.NewDecoder(byteBuf)
+
+			var msg Message
+
+			err = dec.Decode(&msg)
+
+			if err != nil {
+				log.Warn().
+					Str("pid_id", pidId).
+					Msg("there was an error while decoding a remote message")
+				return
+			}
+
+			doSend(toPid, msg)
+		}(msgData)
+	}
 }
 
 func startGeneralPurposeGateway() (uint16, error) {
@@ -145,6 +209,18 @@ func propagateMachineIfNotExists(m *Machine) error {
 func handleGpRequest(req qpmd.Request) {
 	switch req.RequestType {
 	case quitMessageType:
+		pidId := req.Data[pidVal].(string)
+		p, ok := getByPidId(pidId)
+
+		if !ok {
+			log.Warn().
+				Str("pid_id", pidId).
+				Msg("couldn't find pid id target of remote kill command on local system")
+			return
+		}
+
+		p.die()
+
 	case monitorMessageType:
 	case demonitorMessageType:
 	case newConnectionMessageType:

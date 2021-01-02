@@ -1,11 +1,13 @@
 package quacktors
 
 import (
+	"bytes"
+	"encoding/gob"
 	"errors"
 	"fmt"
 	"github.com/Azer0s/qpmd"
+	"github.com/rs/zerolog/log"
 	"github.com/vmihailenco/msgpack/v5"
-	"go.uber.org/zap"
 	"net"
 )
 
@@ -16,6 +18,8 @@ const newConnectionMessageType = "new_connection"
 
 const fromVal = "from"
 const toVal = "to"
+
+const messageVal = "message"
 
 const machineVal = "machine"
 
@@ -36,9 +40,9 @@ type Machine struct {
 
 func (m *Machine) stop() {
 	go func() {
-		logger.Info("stopping connection to remote machine",
-			zap.String("machine_id", m.MachineId),
-		)
+		log.Info().
+			Str("machine_id", m.MachineId).
+			Msg("stopping connection to remote machine")
 
 		m.gatewayQuitChan <- true
 		m.gpQuitChan <- true
@@ -50,9 +54,9 @@ func (m *Machine) stop() {
 }
 
 func startMessageClient(m *Machine, messageChan <-chan remoteMessageTuple, gatewayQuitChan <-chan bool, okChan chan<- bool, errorChan chan<- error) {
-	logger.Debug("starting message client for remote machine",
-		zap.String("machine_id", m.MachineId),
-	)
+	log.Debug().
+		Str("machine_id", m.MachineId).
+		Msg("starting message client for remote machine")
 
 	conn, err := net.Dial("tcp", fmt.Sprintf("%s:%d", m.Address, m.MessageGatewayPort))
 	if err != nil {
@@ -65,25 +69,36 @@ func startMessageClient(m *Machine, messageChan <-chan remoteMessageTuple, gatew
 	for {
 		select {
 		case message := <-messageChan:
-			b, err := msgpack.Marshal(message)
+			byteBuf := new(bytes.Buffer)
+			enc := gob.NewEncoder(byteBuf)
+
+			var inter Message
+			inter = message.Message
+
+			_ = enc.Encode(&inter)
+
+			b, err := msgpack.Marshal(map[string]interface{}{
+				toVal:      message.To.Id,
+				messageVal: byteBuf.Bytes(),
+			})
 
 			if err != nil {
-				logger.Warn("there was an error while sending a message to a remote machine",
-					zap.String("receiver_pid", message.To.String()),
-					zap.String("machine_id", m.MachineId),
-					zap.Error(err),
-				)
+				log.Warn().
+					Str("receiver_pid", message.To.String()).
+					Str("machine_id", m.MachineId).
+					Err(err).
+					Msg("there was an error while sending a message to a remote machine")
 				m.stop()
 			}
 
 			_, err = conn.Write(b)
 
 			if err != nil {
-				logger.Warn("there was an error while sending a message to a remote machine",
-					zap.String("receiver_pid", message.To.String()),
-					zap.String("machine_id", m.MachineId),
-					zap.Error(err),
-				)
+				log.Warn().
+					Str("receiver_pid", message.To.String()).
+					Str("machine_id", m.MachineId).
+					Err(err).
+					Msg("there was an error while sending a message to a remote machine")
 				m.stop()
 			}
 		case <-gatewayQuitChan:
@@ -94,9 +109,9 @@ func startMessageClient(m *Machine, messageChan <-chan remoteMessageTuple, gatew
 }
 
 func startGpClient(m *Machine, gpQuitChan <-chan bool, quitChan <-chan *Pid, monitorChan <-chan remoteMonitorTuple, demonitorChan <-chan remoteMonitorTuple, newConnectionChan <-chan *Machine, okChan chan<- bool, errorChan chan<- error) {
-	logger.Debug("starting general purpose client for remote machine",
-		zap.String("machine_id", m.MachineId),
-	)
+	log.Debug().
+		Str("machine_id", m.MachineId).
+		Msg("starting general purpose client for remote machine")
 
 	conn, err := net.Dial("tcp", fmt.Sprintf("%s:%d", m.Address, m.GeneralPurposePort))
 	if err != nil {
@@ -138,18 +153,21 @@ func startGpClient(m *Machine, gpQuitChan <-chan bool, quitChan <-chan *Pid, mon
 			err := sendRequest(conn, qpmd.Request{
 				RequestType: quitMessageType,
 				Data: map[string]interface{}{
-					pidVal: p,
+					pidVal: p.Id,
 				},
 			})
 			if err != nil {
-				logger.Warn("there was an error while sending a kill command to a remote machine",
-					zap.String("target_pid", p.String()),
-					zap.String("machine_id", m.MachineId),
-					zap.Error(err),
-				)
+				log.Warn().
+					Str("target_pid", p.String()).
+					Str("machine_id", m.MachineId).
+					Err(err).
+					Msg("there was an error while sending a kill command to a remote machine")
 				m.stop()
 			}
 		case r := <-monitorChan:
+			//Note: when we monitor a foreign pid, we also have to link up the remote machine
+			//to the actual monitor. I.e. if the connection to the remote machine goes down, we also have to send out
+			//down messages to the monitors
 			err := sendRequest(conn, qpmd.Request{
 				RequestType: monitorMessageType,
 				Data: map[string]interface{}{
@@ -158,12 +176,12 @@ func startGpClient(m *Machine, gpQuitChan <-chan bool, quitChan <-chan *Pid, mon
 				},
 			})
 			if err != nil {
-				logger.Warn("there was an error while sending a monitor request to a remote machine",
-					zap.String("monitor", r.From.String()),
-					zap.String("monitored_pid", r.To.String()),
-					zap.String("machine_id", m.MachineId),
-					zap.Error(err),
-				)
+				log.Warn().
+					Str("monitor", r.From.String()).
+					Str("monitored_pid", r.To.String()).
+					Str("machine_id", m.MachineId).
+					Err(err).
+					Msg("there was an error while sending a monitor request to a remote machine")
 				m.stop()
 			}
 		case r := <-demonitorChan:
@@ -175,12 +193,12 @@ func startGpClient(m *Machine, gpQuitChan <-chan bool, quitChan <-chan *Pid, mon
 				},
 			})
 			if err != nil {
-				logger.Warn("there was an error while sending a demonitor request to a remote machine",
-					zap.String("monitor", r.From.String()),
-					zap.String("monitored_pid", r.To.String()),
-					zap.String("machine_id", m.MachineId),
-					zap.Error(err),
-				)
+				log.Warn().
+					Str("monitor", r.From.String()).
+					Str("monitored_pid", r.To.String()).
+					Str("machine_id", m.MachineId).
+					Err(err).
+					Msg("there was an error while sending a demonitor request to a remote machine")
 				m.stop()
 			}
 		case machine := <-newConnectionChan:
@@ -191,11 +209,11 @@ func startGpClient(m *Machine, gpQuitChan <-chan bool, quitChan <-chan *Pid, mon
 				},
 			})
 			if err != nil {
-				logger.Warn("there was an error while sending new connection information to a remote machine",
-					zap.String("new_machine_id", machine.MachineId),
-					zap.String("machine_id", m.MachineId),
-					zap.Error(err),
-				)
+				log.Warn().
+					Str("new_machine_id", machine.MachineId).
+					Str("machine_id", m.MachineId).
+					Err(err).
+					Msg("there was an error while sending new connection information to a remote machine")
 				m.stop()
 			}
 		case <-gpQuitChan:
@@ -207,7 +225,7 @@ func startGpClient(m *Machine, gpQuitChan <-chan bool, quitChan <-chan *Pid, mon
 
 func (m *Machine) connect() error {
 	quitChan := make(chan *Pid, 100)
-	messageChan := make(chan remoteMessageTuple, 100)
+	messageChan := make(chan remoteMessageTuple, 2000)
 	monitorChan := make(chan remoteMonitorTuple, 100)
 	demonitorChan := make(chan remoteMonitorTuple, 100)
 	newConnectionChan := make(chan *Machine, 100)
@@ -228,18 +246,18 @@ func (m *Machine) connect() error {
 	errorChan := make(chan error)
 	okChan := make(chan bool)
 
-	logger.Info("connecting to a remote machine",
-		zap.String("machine_id", m.MachineId),
-	)
+	log.Info().
+		Str("machine_id", m.MachineId).
+		Msg("connecting to a remote machine")
 
 	go startMessageClient(m, messageChan, gatewayQuitChan, okChan, errorChan)
 
 	select {
 	case err := <-errorChan:
-		logger.Warn("there was an error while connecting to a remote machine",
-			zap.String("machine_id", m.MachineId),
-			zap.Error(err),
-		)
+		log.Warn().
+			Str("machine_id", m.MachineId).
+			Err(err).
+			Msg("there was an error while connecting to a remote machine")
 		return err
 	case <-okChan:
 		//everything went fine
@@ -250,18 +268,18 @@ func (m *Machine) connect() error {
 	select {
 	case err := <-errorChan:
 		gatewayQuitChan <- true
-		logger.Warn("there was an error while connecting to a remote machine",
-			zap.String("machine_id", m.MachineId),
-			zap.Error(err),
-		)
+		log.Warn().
+			Str("machine_id", m.MachineId).
+			Err(err).
+			Msg("there was an error while connecting to a remote machine")
 		return err
 	case <-okChan:
 		//everything went fine
 	}
 
-	logger.Info("successfully established connection to a remote machine",
-		zap.String("machine_id", m.MachineId),
-	)
+	log.Info().
+		Str("machine_id", m.MachineId).
+		Msg("successfully established connection to a remote machine")
 
 	return nil
 }

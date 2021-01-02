@@ -1,6 +1,8 @@
 package quacktors
 
-import "go.uber.org/zap"
+import (
+	"github.com/rs/zerolog/log"
+)
 
 type Abortable interface {
 	Abort()
@@ -12,20 +14,20 @@ type MonitorAbortable struct {
 }
 
 func (ma *MonitorAbortable) Abort() {
-	logger.Debug("demonitoring pid",
-		zap.String("monitored_pid", ma.pid.String()),
-		zap.String("monitor_pid", ma.self.String()),
-	)
+	log.Debug().
+		Str("monitored_pid", ma.pid.String()).
+		Str("monitor_pid", ma.self.String()).
+		Msg("demonitoring pid")
 
 	go func() {
 		if ma.pid.MachineId != machineId {
 			//Monitor is not on this machine
 
-			logger.Debug("monitor to abort is not on this machine, forwarding to remote machine",
-				zap.String("monitored_pid", ma.pid.String()),
-				zap.String("monitor_pid", ma.self.String()),
-				zap.String("machine_id", ma.pid.MachineId),
-			)
+			log.Debug().
+				Str("monitored_pid", ma.pid.String()).
+				Str("monitor_pid", ma.self.String()).
+				Str("machine_id", ma.pid.MachineId).
+				Msg("monitor to abort is not on this machine, forwarding to remote machine")
 
 			m, ok := getMachine(ma.pid.MachineId)
 
@@ -35,11 +37,11 @@ func (ma *MonitorAbortable) Abort() {
 				return
 			}
 
-			logger.Warn("remote machine is not registered, couldn't abort monitor",
-				zap.String("monitored_pid", ma.pid.String()),
-				zap.String("monitor_pid", ma.self.String()),
-				zap.String("machine_id", ma.pid.MachineId),
-			)
+			log.Warn().
+				Str("monitored_pid", ma.pid.String()).
+				Str("monitor_pid", ma.self.String()).
+				Str("machine_id", ma.pid.MachineId).
+				Msg("remote machine is not registered, couldn't abort monitor")
 
 			return
 		}
@@ -48,10 +50,10 @@ func (ma *MonitorAbortable) Abort() {
 		defer ma.pid.demonitorChanMu.RUnlock()
 
 		if ma.pid.demonitorChan == nil {
-			logger.Warn("pid to demonitor is already down",
-				zap.String("monitored_pid", ma.pid.String()),
-				zap.String("monitor_pid", ma.self.String()),
-			)
+			log.Warn().
+				Str("monitored_pid", ma.pid.String()).
+				Str("monitor_pid", ma.self.String()).
+				Msg("pid to demonitor is already down")
 			return
 		}
 

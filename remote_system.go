@@ -8,6 +8,8 @@ import (
 	"net"
 )
 
+//TODO: log
+
 type RemoteSystem struct {
 	MachineId string
 	Address   string

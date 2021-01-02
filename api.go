@@ -1,8 +1,9 @@
 package quacktors
 
 import (
+	"encoding/gob"
 	"errors"
-	"go.uber.org/zap"
+	"github.com/rs/zerolog/log"
 	"reflect"
 	"regexp"
 	"strings"
@@ -12,17 +13,19 @@ import (
 func RegisterType(message Message) {
 	t := reflect.ValueOf(message).Type().Kind()
 
-	if t != reflect.Ptr {
-		panic("RegisterType has to be called with a pointer to a Message")
+	if t == reflect.Ptr {
+		panic("RegisterType cannot be called with a pointer to a Message")
 	}
 
 	if message.Type() == "" {
 		panic("message.Type() can not return an empty string")
 	}
 
-	storeType(message)
+	gob.Register(message)
 
-	logger.Info("registered type", zap.String("type", message.Type()))
+	log.Info().
+		Str("type", message.Type()).
+		Msg("registered type")
 }
 
 func RootContext() Context {
@@ -48,7 +51,9 @@ func SpawnStateful(actor Actor) *Pid {
 }
 
 func NewSystem(name string) (*System, error) {
-	logger.Info("initializing new system", zap.String("system_name", name))
+	log.Info().
+		Str("system_name", name).
+		Msg("initializing new system")
 
 	s := &System{
 		name:              name,
@@ -60,20 +65,20 @@ func NewSystem(name string) (*System, error) {
 	p, err := s.startServer()
 
 	if err != nil {
-		logger.Warn("there was an error while starting the system server",
-			zap.String("system_name", s.name),
-			zap.Error(err),
-		)
+		log.Warn().
+			Str("system_name", s.name).
+			Err(err).
+			Msg("there was an error while starting the system server")
 		return &System{}, err
 	}
 
 	conn, err := qpmdRegister(s, p)
 
 	if err != nil {
-		logger.Warn("there was an error while registering system to qpmd",
-			zap.String("system_name", s.name),
-			zap.Error(err),
-		)
+		log.Warn().
+			Str("system_name", s.name).
+			Err(err).
+			Msg("there was an error while registering system to qpmd")
 		return &System{}, err
 	}
 
@@ -91,19 +96,19 @@ func Connect(name string) (*RemoteSystem, error) {
 
 	s := strings.SplitN(name, "@", 2)
 
-	logger.Info("connecting to remote system",
-		zap.String("system_name", s[0]),
-		zap.String("remote_address", s[1]),
-	)
+	log.Info().
+		Str("system_name", s[0]).
+		Str("remote_address", s[1]).
+		Msg("connecting to remote system")
 
 	r, err := qpmdLookup(s[0], s[1])
 
 	if err != nil {
-		logger.Warn("there was an error while looking up remote system",
-			zap.String("system_name", s[0]),
-			zap.String("remote_address", s[1]),
-			zap.Error(err),
-		)
+		log.Warn().
+			Str("system_name", s[0]).
+			Str("remote_address", s[1]).
+			Err(err).
+			Msg("there was an error while looking up remote system")
 		return &RemoteSystem{}, err
 	}
 
@@ -116,9 +121,9 @@ func Connect(name string) (*RemoteSystem, error) {
 	} else {
 		//start connections to remote machine
 
-		logger.Warn("remote machine is not yet connected",
-			zap.String("machine_id", m.MachineId),
-		)
+		log.Warn().
+			Str("machine_id", r.MachineId).
+			Msg("remote machine is not yet connected")
 
 		err := r.Machine.connect()
 

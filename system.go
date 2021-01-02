@@ -4,7 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/Azer0s/qpmd"
-	"go.uber.org/zap"
+	"github.com/rs/zerolog/log"
 	"net"
 	"sync"
 )
@@ -39,7 +39,9 @@ func (s *System) Close() {
 }
 
 func (s *System) startServer() (uint16, error) {
-	logger.Debug("starting system server", zap.String("system_name", s.name))
+	log.Debug().
+		Str("system_name", s.name).
+		Msg("starting system server")
 
 	return startServer(func(portChan chan int, errorChan chan error) {
 		listener, err := net.Listen("tcp", ":0")
@@ -52,27 +54,33 @@ func (s *System) startServer() (uint16, error) {
 		port := listener.Addr().(*net.TCPAddr).Port
 		portChan <- port
 
-		logger.Debug("started system server successfully", zap.String("system_name", s.name))
+		log.Debug().
+			Str("system_name", s.name).
+			Msg("started system server successfully")
 
 		for {
 			select {
 			case <-s.quitChan:
-				logger.Info("quitting system server", zap.String("system_name", s.name))
+				log.Info().
+					Str("system_name", s.name).
+					Msg("quitting system server")
 				return
 			default:
 				conn, err := listener.Accept()
 				if err != nil {
-					logger.Warn("there was an error while accepting an incoming client for system",
-						zap.String("system_name", s.name),
-						zap.Error(err),
-					)
+					log.Warn().
+						Str("system_name", s.name).
+						Err(err).
+						Msg("there was an error while accepting an incoming client for system")
+
 					continue
 				}
 
-				logger.Info("handling incoming client for system",
-					zap.String("system_name", s.name),
-					zap.String("client", conn.RemoteAddr().String()),
-				)
+				log.Info().
+					Str("system_name", s.name).
+					Str("client", conn.RemoteAddr().String()).
+					Msg("handling incoming client for system")
+
 				go s.handleClient(conn)
 			}
 		}
@@ -85,10 +93,10 @@ func (s *System) handleClient(conn net.Conn) {
 	defer func() {
 		recover()
 
-		logger.Info("closing system server connection to client",
-			zap.String("system_name", s.name),
-			zap.String("client", c),
-		)
+		log.Info().
+			Str("system_name", s.name).
+			Str("client", c).
+			Msg("closing system server connection to client")
 
 		err := conn.Close()
 		if err != nil {
@@ -106,17 +114,18 @@ func (s *System) handleClient(conn net.Conn) {
 	case qpmd.REQUEST_HELLO:
 		//I'll leave the hello message for now. Maybe it'll be useful in the future
 		//(plus it's more consistent to machine to machine communication)
-		logger.Info("handling system server hello request",
-			zap.String("system_name", s.name),
-			zap.String("client", c),
-		)
+		log.Info().
+			Str("system_name", s.name).
+			Str("client", c).
+			Msg("handling system server hello request")
+
 		err = writeOk(conn, map[string]interface{}{})
 
 		if err != nil {
-			logger.Warn("there was an error while sending an ok message to a client",
-				zap.String("client", c),
-				zap.Error(err),
-			)
+			log.Warn().
+				Str("client", c).
+				Err(err).
+				Msg("there was an error while sending an ok message to a client")
 		}
 	case qpmd.REQUEST_LOOKUP:
 		s.handlersMu.RLock()
@@ -124,11 +133,11 @@ func (s *System) handleClient(conn net.Conn) {
 
 		handlerName := req.Data[handler].(string)
 
-		logger.Info("handling system server lookup request",
-			zap.String("system_name", s.name),
-			zap.String("client", c),
-			zap.String("handler_name", handlerName),
-		)
+		log.Info().
+			Str("system_name", s.name).
+			Str("client", c).
+			Str("handler_name", handlerName).
+			Msg("handling system server lookup request")
 
 		h, ok := s.handlers[handlerName]
 
@@ -138,28 +147,28 @@ func (s *System) handleClient(conn net.Conn) {
 			})
 
 			if err != nil {
-				logger.Warn("there was an error while sending an ok message to a client",
-					zap.String("client", c),
-					zap.Error(err),
-				)
+				log.Warn().
+					Str("client", c).
+					Err(err).
+					Msg("there was an error while sending an ok message to a client")
 			}
 
 			return
 		}
 
-		logger.Warn("couldn't find handler for system server lookup request",
-			zap.String("system_name", s.name),
-			zap.String("client", c),
-			zap.String("handler_name", handlerName),
-		)
+		log.Warn().
+			Str("system_name", s.name).
+			Str("client", c).
+			Str("handler_name", handlerName).
+			Msg("couldn't find handler for system server lookup request")
 
 		err = writeError(conn, errors.New(fmt.Sprintf("couldn't find handler %s", handlerName)))
 
 		if err != nil {
-			logger.Warn("there was an error while sending an error message to a client",
-				zap.String("client", c),
-				zap.Error(err),
-			)
+			log.Warn().
+				Str("client", c).
+				Err(err).
+				Msg("there was an error while sending an error message to a client")
 		}
 	}
 }

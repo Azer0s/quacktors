@@ -1,6 +1,8 @@
 package quacktors
 
-import "go.uber.org/zap"
+import (
+	"github.com/rs/zerolog/log"
+)
 
 type Actor interface {
 	Init(ctx *Context)
@@ -43,6 +45,14 @@ func doSend(to *Pid, message Message) {
 
 		//If the actor has already quit, do nothing
 		if to.messageChan == nil {
+			//Maybe the current pid instance is just empty but the pid actually does exist on our local machine
+			//This can happen when you send the pid to a remote machine and receive it back
+			p, ok := getByPidId(to.Id)
+
+			if ok {
+				p.messageChan <- message
+			}
+
 			return
 		}
 
@@ -64,7 +74,9 @@ func startActor(actor Actor) *Pid {
 
 	actor.Init(ctx)
 
-	logger.Info("starting actor", zap.String("pid", pid.String()))
+	log.Info().
+		Str("pid", pid.String()).
+		Msg("starting actor")
 
 	go func() {
 		defer func() {
@@ -76,22 +88,32 @@ func startActor(actor Actor) *Pid {
 		for {
 			select {
 			case <-quitChan:
-				logger.Info("actor received quit event", zap.String("pid", pid.String()))
+				log.Info().
+					Str("pid", pid.String()).
+					Msg("actor received quit event")
 				return
 			case message := <-messageChan:
 				switch message.(type) {
 				case *PoisonPill:
-					logger.Info("actor received poison pill", zap.String("pid", pid.String()))
+					log.Info().
+						Str("pid", pid.String()).
+						Msg("actor received poison pill")
 					//Quit actor on PoisonPill message
 					return
 				default:
 					actor.Run(ctx, message)
 				}
 			case monitor := <-monitorChan:
-				logger.Info("actor received monitor request", zap.String("pid", pid.String()), zap.String("monitor", monitor.String()))
+				log.Info().
+					Str("pid", pid.String()).
+					Str("monitor", monitor.String()).
+					Msg("actor received monitor request")
 				pid.setupMonitor(monitor)
 			case monitor := <-demonitorChan:
-				logger.Info("actor received demonitor request", zap.String("pid", pid.String()), zap.String("monitor", monitor.String()))
+				log.Info().
+					Str("pid", pid.String()).
+					Str("monitor", monitor.String()).
+					Msg("actor received demonitor request")
 				pid.removeMonitor(monitor)
 			}
 		}

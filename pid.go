@@ -2,7 +2,7 @@ package quacktors
 
 import (
 	"fmt"
-	"go.uber.org/zap"
+	"github.com/rs/zerolog/log"
 	"sync"
 )
 
@@ -48,7 +48,9 @@ func createPid(quitChan chan<- bool, messageChan chan<- Message, monitorChan cha
 }
 
 func (pid *Pid) cleanup() {
-	logger.Info("cleaning up pid", zap.String("pid_id", pid.Id))
+	log.Info().
+		Str("pid_id", pid.Id).
+		Msg("cleaning up pid")
 
 	deletePid(pid.Id)
 
@@ -74,15 +76,22 @@ func (pid *Pid) cleanup() {
 
 	//Terminate all scheduled events/send down message to monitor tasks
 	pid.monitorSetupMu.Lock()
-	logger.Debug("sending out scheduled events after pid cleanup", zap.String("pid_id", pid.Id))
+
+	log.Debug().
+		Str("pid_id", pid.Id).
+		Msg("sending out scheduled events after pid cleanup")
+
 	for n, ch := range pid.scheduled {
 		ch <- true //this is blocking
 		close(ch)
 		delete(pid.scheduled, n)
 	}
 
+	log.Debug().
+		Str("pid_id", pid.Id).
+		Msg("deleting monitor abort channels after pid cleanup")
+
 	//Delete monitorQuitChannels
-	logger.Debug("deleting monitor abort channels after pid cleanup", zap.String("pid_id", pid.Id))
 	for n, c := range pid.monitorQuitChannels {
 		close(c)
 		delete(pid.monitorQuitChannels, n)
@@ -93,11 +102,6 @@ func (pid *Pid) cleanup() {
 }
 
 func (pid *Pid) setupMonitor(monitor *Pid) {
-	logger.Info("setting up monitor",
-		zap.String("monitored_pid", pid.String()),
-		zap.String("monitor_pid", monitor.String()),
-	)
-
 	pid.monitorSetupMu.Lock()
 	defer pid.monitorSetupMu.Unlock()
 
@@ -112,7 +116,7 @@ func (pid *Pid) setupMonitor(monitor *Pid) {
 		case <-monitorQuitChannel:
 			return
 		case <-monitorChannel:
-			doSend(monitor, &DownMessage{Who: pid})
+			doSend(monitor, DownMessage{Who: pid})
 		}
 	}()
 }
@@ -131,12 +135,27 @@ func (pid *Pid) removeMonitor(monitor *Pid) {
 	delete(pid.monitorQuitChannels, name)
 	delete(pid.scheduled, name)
 
-	logger.Info("monitor removed successfully",
-		zap.String("monitored_pid", pid.String()),
-		zap.String("monitor_pid", monitor.String()),
-	)
+	log.Info().
+		Str("monitored_pid", pid.String()).
+		Str("monitor_pid", monitor.String()).
+		Msg("monitor removed successfully")
 }
 
 func (pid *Pid) String() string {
 	return fmt.Sprintf("%s@%s", pid.Id, pid.MachineId)
+}
+
+func (pid *Pid) die() {
+	log.Debug().
+		Str("pid", pid.String()).
+		Msg("sending quit command to actor")
+
+	pid.quitChanMu.RLock()
+	defer pid.quitChanMu.RUnlock()
+
+	if pid.quitChan == nil {
+		return
+	}
+
+	pid.quitChan <- true
 }

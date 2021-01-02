@@ -3,7 +3,6 @@ package quacktors
 import (
 	"fmt"
 	"github.com/stretchr/testify/assert"
-	"sync"
 	"testing"
 	"time"
 )
@@ -59,7 +58,7 @@ func TestMonitorWithPoisonPill(t *testing.T) {
 
 	<-time.After(50 * time.Millisecond)
 
-	rootCtx.Send(p, &PoisonPill{})
+	rootCtx.Send(p, PoisonPill{})
 
 	Wait()
 }
@@ -93,9 +92,9 @@ func TestMonitorAbortable_Abort(t *testing.T) {
 
 	<-time.After(50 * time.Millisecond)
 
-	rootCtx.Send(p, &PoisonPill{})
+	rootCtx.Send(p, PoisonPill{})
 
-	rootCtx.Send(q, &GenericMessage{Value: ""})
+	rootCtx.Send(q, GenericMessage{Value: ""})
 
 	Wait()
 }
@@ -114,7 +113,7 @@ func TestMonitorDeadPid(t *testing.T) {
 		ctx.Monitor(p)
 	}, func(ctx *Context, message Message) {
 		switch message.(type) {
-		case *DownMessage:
+		case DownMessage:
 			ctx.Quit()
 		}
 	})
@@ -130,23 +129,12 @@ func (t TestMessage) Type() string {
 	return "TestMessage"
 }
 
-func TestTypeRegistration(t *testing.T) {
-	RegisterType(&TestMessage{Foo: MachineId()})
-	v := getType(TestMessage{}.Type())
-
-	assert.Empty(t, v.(TestMessage).Foo)
-}
-
 func TestNewSystem(t *testing.T) {
 	_, err := NewSystem("test")
 
 	if err != nil {
 		panic(err)
 	}
-
-	wg := sync.WaitGroup{}
-	wg.Add(1)
-	wg.Wait()
 }
 
 func TestNewSystemWithHandler(t *testing.T) {
@@ -158,7 +146,7 @@ func TestNewSystemWithHandler(t *testing.T) {
 
 	p := Spawn(func(ctx *Context, message Message) {
 		switch m := message.(type) {
-		case *GenericMessage:
+		case GenericMessage:
 			fmt.Println(m.Value)
 			ctx.Quit()
 		}
@@ -176,41 +164,41 @@ func TestConnect(t *testing.T) {
 
 	if err != nil {
 		t.Fail()
+		return
 	}
-
-	wg := sync.WaitGroup{}
-	wg.Add(1)
-	wg.Wait()
 
 	p, err := r.Remote("printer")
 
 	if err != nil {
 		t.Fail()
+		return
 	}
 
-	rootCtx.Send(p, &GenericMessage{Value: "Hello!"})
+	rootCtx.Send(p, GenericMessage{Value: "Hello!"})
+
+	<-time.After(50 * time.Millisecond)
 }
 
-func TestConnect2(t *testing.T) {
+func TestConnectRemoteKill(t *testing.T) {
 	rootCtx := RootContext()
 
 	r, err := Connect("test@localhost")
 
 	if err != nil {
 		t.Fail()
+		return
 	}
-
-	wg := sync.WaitGroup{}
-	wg.Add(1)
-	wg.Wait()
 
 	p, err := r.Remote("printer")
 
 	if err != nil {
 		t.Fail()
+		return
 	}
 
-	rootCtx.Send(p, &GenericMessage{Value: "Hello!"})
+	rootCtx.Kill(p)
+
+	<-time.After(50 * time.Millisecond)
 }
 
 type TestActor struct {
