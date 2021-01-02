@@ -3,19 +3,17 @@ package quacktors
 import (
 	"fmt"
 	"github.com/Azer0s/qpmd"
-	"github.com/rs/zerolog"
-	"github.com/rs/zerolog/log"
+	"github.com/Azer0s/quacktors/config"
 	"github.com/vmihailenco/msgpack/v5"
 	"net"
-	"os"
 )
 
 var messageGatewayPort = uint16(0)
 var gpGatewayPort = uint16(0)
 
-func init() {
-	log.Logger = log.Output(zerolog.ConsoleWriter{Out: os.Stderr})
+var logger = config.GetLogger()
 
+func init() {
 	initializeGateways()
 	initializeQpmdConnection()
 	initializeBuiltInMessages()
@@ -26,12 +24,14 @@ func initializeGateways() {
 
 	messageGatewayPort, err = startMessageGateway()
 	if err != nil {
-		panic(err)
+		logger.Fatal("there was an error while starting the message gateway",
+			"error", err)
 	}
 
 	gpGatewayPort, err = startGeneralPurposeGateway()
 	if err != nil {
-		panic(err)
+		logger.Fatal("there was an error while starting the general purpose gateway",
+			"error", err)
 	}
 }
 

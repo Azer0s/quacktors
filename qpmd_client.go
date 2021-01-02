@@ -4,17 +4,16 @@ import (
 	"errors"
 	"fmt"
 	"github.com/Azer0s/qpmd"
-	"github.com/rs/zerolog/log"
+	"github.com/Azer0s/quacktors/config"
 	"net"
 	"time"
 )
 
-var qpmdPort = 7161
+var qpmdPort = config.GetQpmdPort()
 
 func qpmdRegister(system *System, systemPort uint16) (net.Conn, error) {
-	log.Debug().
-		Str("system_name", system.name).
-		Msg("registering system to qpmd")
+	logger.Debug("registering system to qpmd",
+		"system_name", system.name)
 
 	conn, err := net.Dial("tcp", fmt.Sprintf("localhost:%d", qpmdPort))
 	if err != nil {
@@ -48,8 +47,7 @@ func qpmdRegister(system *System, systemPort uint16) (net.Conn, error) {
 
 func qpmdHeartbeat(conn net.Conn, system *System) {
 	quit := func() {
-		log.Error().
-			Msg("qpmd heartbeat was quit unexpectedly serverside, is qpmd still running?")
+		logger.Error("qpmd heartbeat was quit unexpectedly serverside, is qpmd still running?")
 		system.quitChan <- true
 		system.closed = true
 	}
@@ -81,10 +79,9 @@ func qpmdHeartbeat(conn net.Conn, system *System) {
 }
 
 func qpmdLookup(system, remoteAddress string) (*RemoteSystem, error) {
-	log.Debug().
-		Str("system_name", system).
-		Str("remote_address", remoteAddress).
-		Msg("looking up remote system in qpmd")
+	logger.Debug("looking up remote system in qpmd",
+		"system_name", system,
+		"remote_address", remoteAddress)
 
 	conn, err := net.Dial("tcp", fmt.Sprintf("%s:%d", remoteAddress, qpmdPort))
 	if err != nil {

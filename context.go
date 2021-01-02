@@ -1,12 +1,12 @@
 package quacktors
 
 import (
-	"github.com/rs/zerolog/log"
 	"reflect"
 )
 
 type Context struct {
-	self *Pid
+	self   *Pid
+	Logger contextLogger
 }
 
 func (c *Context) Self() *Pid {
@@ -26,10 +26,9 @@ func (c *Context) Send(to *Pid, message Message) {
 func (c *Context) Kill(pid *Pid) {
 	go func() {
 		if pid.MachineId != machineId {
-			log.Debug().
-				Str("target_pid", pid.String()).
-				Str("machine_id", pid.MachineId).
-				Msg("pid to kill is not on this machine, forwarding to remote machine")
+			logger.Debug("pid to kill is not on this machine, forwarding to remote machine",
+				"target_pid", pid.String(),
+				"machine_id", pid.MachineId)
 
 			m, ok := getMachine(pid.MachineId)
 
@@ -38,10 +37,9 @@ func (c *Context) Kill(pid *Pid) {
 				return
 			}
 
-			log.Warn().
-				Str("target_pid", pid.String()).
-				Str("machine_id", pid.MachineId).
-				Msg("remote machine is not registered, couldn't kill pid")
+			logger.Warn("remote machine is not registered, couldn't kill pid",
+				"target_pid", pid.String(),
+				"machine_id", pid.MachineId)
 
 			return
 		}
@@ -58,18 +56,16 @@ func (c *Context) Monitor(pid *Pid) Abortable {
 	errorChan := make(chan bool)
 	okChan := make(chan bool)
 
-	log.Info().
-		Str("monitored_pid", pid.String()).
-		Str("monitor_pid", c.self.String()).
-		Msg("setting up monitor")
+	logger.Info("setting up monitor",
+		"monitored_pid", pid.String(),
+		"monitor_pid", c.self.String())
 
 	go func() {
 		if pid.MachineId != machineId {
-			log.Debug().
-				Str("monitored_pid", pid.String()).
-				Str("monitor_pid", c.self.String()).
-				Str("machine_id", pid.MachineId).
-				Msg("pid to monitor is not on this machine, forwarding to remote machine")
+			logger.Debug("pid to monitor is not on this machine, forwarding to remote machine",
+				"monitored_pid", pid.String(),
+				"monitor_pid", c.self.String(),
+				"machine_id", pid.MachineId)
 
 			m, ok := getMachine(pid.MachineId)
 			if ok {
@@ -79,11 +75,10 @@ func (c *Context) Monitor(pid *Pid) Abortable {
 				return
 			}
 
-			log.Warn().
-				Str("monitored_pid", pid.String()).
-				Str("monitor_pid", c.self.String()).
-				Str("machine_id", pid.MachineId).
-				Msg("remote machine is not registered, couldn't monitor pid")
+			logger.Warn("remote machine is not registered, couldn't monitor pid",
+				"monitored_pid", pid.String(),
+				"monitor_pid", c.self.String(),
+				"machine_id", pid.MachineId)
 
 			errorChan <- true
 		} else {
@@ -111,10 +106,9 @@ func (c *Context) Monitor(pid *Pid) Abortable {
 		//Either the remote machine disconnected or the actor is already dead.
 		//Either way, send a down message
 
-		log.Warn().
-			Str("monitored_pid", pid.String()).
-			Str("monitor_pid", c.self.String()).
-			Msg("monitored pid is either dead or on a machine that disconnected, sending out DownMessage to monitor immediately")
+		logger.Warn("monitored pid is either dead or on a machine that disconnected, sending out DownMessage to monitor immediately",
+			"monitored_pid", pid.String(),
+			"monitor_pid", c.self.String())
 
 		doSend(c.self, DownMessage{Who: pid})
 		return &NoopAbortable{}

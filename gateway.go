@@ -6,12 +6,10 @@ import (
 	"encoding/json"
 	"errors"
 	"github.com/Azer0s/qpmd"
-	"github.com/rs/zerolog/log"
 	"github.com/vmihailenco/msgpack/v5"
+	"io"
 	"net"
 )
-
-//TODO: logging
 
 /*
 When connecting to a remote machine, quacktors works with two TCP streams
@@ -20,6 +18,8 @@ One for messages and another one for system commands (monitor, demonitor, kill)
 
 func startMessageGateway() (uint16, error) {
 	return startServer(func(portChan chan int, errorChan chan error) {
+		logger.Info("starting message gateway")
+
 		listener, err := net.Listen("tcp", ":0")
 
 		if err != nil {
@@ -28,11 +28,17 @@ func startMessageGateway() (uint16, error) {
 		}
 
 		port := listener.Addr().(*net.TCPAddr).Port
+
+		logger.Debug("started message gatway",
+			"port", port)
+
 		portChan <- port
 
 		for {
 			conn, err := listener.Accept()
 			if err != nil {
+				logger.Warn("there was an error while accepting new connection to message gateway",
+					"error", err)
 				_ = conn.Close()
 				continue
 			}
@@ -43,17 +49,35 @@ func startMessageGateway() (uint16, error) {
 }
 
 func handleMessageClient(conn net.Conn) {
+	c := conn.RemoteAddr().String()
+
 	defer func() {
+		logger.Info("closing connection to message gateway",
+			"client", c)
 		err := conn.Close()
 		if err != nil {
+			logger.Warn("there was an error while closing connection to the message gateway",
+				"client", c,
+				"error", err)
 			return
 		}
 	}()
+
+	logger.Info("handling new message gateway connection from remote machine",
+		"client", c)
 
 	for {
 		buf := make([]byte, 4096)
 		n, err := conn.Read(buf)
 		if n == 0 || err != nil {
+			if errors.Is(err, io.EOF) {
+				logger.Info("remote machine disconnected from message gateway",
+					"client", c)
+			} else {
+				logger.Warn("there was an error while reading incoming message from remote machine",
+					"client", c,
+					"error", err)
+			}
 			return
 		}
 
@@ -61,6 +85,9 @@ func handleMessageClient(conn net.Conn) {
 
 		err = msgpack.Unmarshal(buf[:n], &msgData)
 		if err != nil {
+			logger.Warn("there was an error while unmarshalling incoming message from remote machine",
+				"client", c,
+				"error", err)
 			return
 		}
 
@@ -68,10 +95,14 @@ func handleMessageClient(conn net.Conn) {
 			pidId := data[toVal].(string)
 			toPid, ok := getByPidId(pidId)
 
+			logger.Trace("received new message from remote machine for pid on local system",
+				"client", c,
+				"pid_id", pidId)
+
 			if !ok {
-				log.Warn().
-					Str("pid_id", pidId).
-					Msg("couldn't find pid id target of remote message on local system")
+				logger.Warn("couldn't find pid id target of remote message on local system",
+					"client", c,
+					"pid_id", pidId)
 				return
 			}
 
@@ -83,9 +114,9 @@ func handleMessageClient(conn net.Conn) {
 			err = dec.Decode(&msg)
 
 			if err != nil {
-				log.Warn().
-					Str("pid_id", pidId).
-					Msg("there was an error while decoding a remote message")
+				logger.Warn("there was an error while decoding incoming message from remote machine",
+					"client", c,
+					"pid_id", pidId)
 				return
 			}
 
@@ -96,6 +127,8 @@ func handleMessageClient(conn net.Conn) {
 
 func startGeneralPurposeGateway() (uint16, error) {
 	return startServer(func(portChan chan int, errorChan chan error) {
+		logger.Info("starting general purpose gateway")
+
 		listener, err := net.Listen("tcp", ":0")
 
 		if err != nil {
@@ -104,6 +137,10 @@ func startGeneralPurposeGateway() (uint16, error) {
 		}
 
 		port := listener.Addr().(*net.TCPAddr).Port
+
+		logger.Debug("started general purpose gatway",
+			"port", port)
+
 		portChan <- port
 
 		for {
@@ -117,6 +154,8 @@ func startGeneralPurposeGateway() (uint16, error) {
 
 			conn, err := listener.Accept()
 			if err != nil {
+				logger.Warn("there was an error while accepting new connection to general purpose gateway",
+					"error", err)
 				_ = conn.Close()
 				continue
 			}
@@ -127,16 +166,29 @@ func startGeneralPurposeGateway() (uint16, error) {
 }
 
 func handleGpClient(conn net.Conn) {
+	c := conn.RemoteAddr().String()
+
 	defer func() {
+		logger.Info("closing connection to general purpose gateway",
+			"client", c)
 		err := conn.Close()
 		if err != nil {
+			logger.Warn("there was an error while closing connection to general purpose gateway",
+				"client", c,
+				"error", err)
 			return
 		}
 	}()
 
+	logger.Info("handling new general purpose gateway connection from remote machine",
+		"client", c)
+
 	req, err := readRequest(conn)
 
 	if err != nil {
+		logger.Warn("there was an error while reading the initial hello request to the general purpose gateway",
+			"client", c,
+			"error", err)
 		return
 	}
 
@@ -161,6 +213,9 @@ func handleGpClient(conn net.Conn) {
 	})
 
 	if err != nil {
+		logger.Warn("there was an error while responding to the initial hello request to the general purpose gateway",
+			"client", c,
+			"error", err)
 		return
 	}
 
@@ -169,6 +224,9 @@ func handleGpClient(conn net.Conn) {
 	err = propagateMachineIfNotExists(m)
 
 	if err != nil {
+		logger.Warn("there was an error while attempting to propagate new connection information to connected machines",
+			"client", c,
+			"error", err)
 		return
 	}
 
@@ -176,10 +234,18 @@ func handleGpClient(conn net.Conn) {
 		r, err := readRequest(conn)
 
 		if err != nil {
+			if errors.Is(err, io.EOF) {
+				logger.Info("remote machine disconnected from general purpose gateway",
+					"client", c)
+			} else {
+				logger.Warn("there was an error while reading incoming command from remote machine",
+					"client", c,
+					"error", err)
+			}
 			return
 		}
 
-		go handleGpRequest(r)
+		go handleGpRequest(r, c)
 	}
 }
 
@@ -198,6 +264,9 @@ func propagateMachineIfNotExists(m *Machine) error {
 
 		for _, machine := range machines {
 			if machine.MachineId != m.MachineId {
+				logger.Debug("propagating new connection information to connected machine",
+					"machine_id", m.MachineId)
+
 				machine.newConnectionChan <- m
 			}
 		}
@@ -206,16 +275,19 @@ func propagateMachineIfNotExists(m *Machine) error {
 	return nil
 }
 
-func handleGpRequest(req qpmd.Request) {
+func handleGpRequest(req qpmd.Request, client string) {
 	switch req.RequestType {
 	case quitMessageType:
 		pidId := req.Data[pidVal].(string)
 		p, ok := getByPidId(pidId)
 
+		logger.Debug("received quit command from remote machine for pid on local system",
+			"client", client,
+			"pid_id", pidId)
+
 		if !ok {
-			log.Warn().
-				Str("pid_id", pidId).
-				Msg("couldn't find pid id target of remote kill command on local system")
+			logger.Warn("couldn't find pid id target of remote kill command on local system",
+				"pid_id", pidId)
 			return
 		}
 
@@ -226,18 +298,30 @@ func handleGpRequest(req qpmd.Request) {
 	case newConnectionMessageType:
 		b, err := json.Marshal(req.Data[machineVal])
 		if err != nil {
+			logger.Warn("there was an error while trying to decode new connection information from remote machine",
+				"client", client,
+				"error", err)
 			return
 		}
 
 		m := &Machine{}
 		err = json.Unmarshal(b, m)
 		if err != nil {
+			logger.Warn("there was an error while trying to decode new connection information from remote machine",
+				"client", client,
+				"error", err)
 			return
 		}
+
+		logger.Debug("received new connection information from remote machine",
+			"client", client)
 
 		err = propagateMachineIfNotExists(m)
 
 		if err != nil {
+			logger.Warn("there was an error while attempting to propagate new connection information to connected machines",
+				"client", client,
+				"error", err)
 			return
 		}
 	}

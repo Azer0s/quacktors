@@ -3,7 +3,6 @@ package quacktors
 import (
 	"encoding/gob"
 	"errors"
-	"github.com/rs/zerolog/log"
 	"reflect"
 	"regexp"
 	"strings"
@@ -23,13 +22,18 @@ func RegisterType(message Message) {
 
 	gob.RegisterName(message.Type(), message)
 
-	log.Info().
-		Str("type", message.Type()).
-		Msg("registered type")
+	logger.Info("registered type",
+		"type", message.Type(),
+	)
+}
+
+var rootContext = Context{
+	self:   &Pid{Id: "root"},
+	Logger: contextLogger{pid: "root"},
 }
 
 func RootContext() Context {
-	return Context{}
+	return rootContext
 }
 
 func Spawn(action func(ctx *Context, message Message)) *Pid {
@@ -51,9 +55,8 @@ func SpawnStateful(actor Actor) *Pid {
 }
 
 func NewSystem(name string) (*System, error) {
-	log.Info().
-		Str("system_name", name).
-		Msg("initializing new system")
+	logger.Info("initializing new system",
+		"system_name", name)
 
 	s := &System{
 		name:              name,
@@ -65,20 +68,18 @@ func NewSystem(name string) (*System, error) {
 	p, err := s.startServer()
 
 	if err != nil {
-		log.Warn().
-			Str("system_name", s.name).
-			Err(err).
-			Msg("there was an error while starting the system server")
+		logger.Warn("there was an error while starting the system server",
+			"system_name", s.name,
+			"error", err)
 		return &System{}, err
 	}
 
 	conn, err := qpmdRegister(s, p)
 
 	if err != nil {
-		log.Warn().
-			Str("system_name", s.name).
-			Err(err).
-			Msg("there was an error while registering system to qpmd")
+		logger.Warn("there was an error while registering system to qpmd",
+			"system_name", s.name,
+			"error", err)
 		return &System{}, err
 	}
 
@@ -96,19 +97,17 @@ func Connect(name string) (*RemoteSystem, error) {
 
 	s := strings.SplitN(name, "@", 2)
 
-	log.Info().
-		Str("system_name", s[0]).
-		Str("remote_address", s[1]).
-		Msg("connecting to remote system")
+	logger.Info("connecting to remote system",
+		"system_name", s[0],
+		"remote_address", s[1])
 
 	r, err := qpmdLookup(s[0], s[1])
 
 	if err != nil {
-		log.Warn().
-			Str("system_name", s[0]).
-			Str("remote_address", s[1]).
-			Err(err).
-			Msg("there was an error while looking up remote system")
+		logger.Warn("there was an error while looking up remote system",
+			"system_name", s[0],
+			"remote_address", s[1],
+			"error", err)
 		return &RemoteSystem{}, err
 	}
 
@@ -121,9 +120,8 @@ func Connect(name string) (*RemoteSystem, error) {
 	} else {
 		//start connections to remote machine
 
-		log.Warn().
-			Str("machine_id", r.MachineId).
-			Msg("remote machine is not yet connected")
+		logger.Warn("remote machine is not yet connected",
+			"machine_id", r.MachineId)
 
 		err := r.Machine.connect()
 

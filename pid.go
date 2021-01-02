@@ -2,7 +2,6 @@ package quacktors
 
 import (
 	"fmt"
-	"github.com/rs/zerolog/log"
 	"sync"
 )
 
@@ -48,9 +47,8 @@ func createPid(quitChan chan<- bool, messageChan chan<- Message, monitorChan cha
 }
 
 func (pid *Pid) cleanup() {
-	log.Info().
-		Str("pid_id", pid.Id).
-		Msg("cleaning up pid")
+	logger.Info("cleaning up pid",
+		"pid_id", pid.Id)
 
 	deletePid(pid.Id)
 
@@ -77,9 +75,8 @@ func (pid *Pid) cleanup() {
 	//Terminate all scheduled events/send down message to monitor tasks
 	pid.monitorSetupMu.Lock()
 
-	log.Debug().
-		Str("pid_id", pid.Id).
-		Msg("sending out scheduled events after pid cleanup")
+	logger.Debug("sending out scheduled events after pid cleanup",
+		"pid_id", pid.Id)
 
 	for n, ch := range pid.scheduled {
 		ch <- true //this is blocking
@@ -87,9 +84,8 @@ func (pid *Pid) cleanup() {
 		delete(pid.scheduled, n)
 	}
 
-	log.Debug().
-		Str("pid_id", pid.Id).
-		Msg("deleting monitor abort channels")
+	logger.Debug("deleting monitor abort channels",
+		"pid_id", pid.Id)
 
 	//Delete monitorQuitChannels
 	for n, c := range pid.monitorQuitChannels {
@@ -135,10 +131,9 @@ func (pid *Pid) removeMonitor(monitor *Pid) {
 	delete(pid.monitorQuitChannels, name)
 	delete(pid.scheduled, name)
 
-	log.Info().
-		Str("monitored_pid", pid.String()).
-		Str("monitor_pid", monitor.String()).
-		Msg("monitor removed successfully")
+	logger.Info("monitor removed successfully",
+		"monitored_pid", pid.String(),
+		"monitor_pid", monitor.String())
 }
 
 func (pid *Pid) String() string {
@@ -146,9 +141,8 @@ func (pid *Pid) String() string {
 }
 
 func (pid *Pid) die() {
-	log.Debug().
-		Str("pid", pid.String()).
-		Msg("sending quit command to actor")
+	logger.Debug("sending quit command to actor",
+		"pid", pid.String())
 
 	pid.quitChanMu.RLock()
 	defer pid.quitChanMu.RUnlock()

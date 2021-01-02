@@ -1,9 +1,5 @@
 package quacktors
 
-import (
-	"github.com/rs/zerolog/log"
-)
-
 type Abortable interface {
 	Abort()
 }
@@ -14,20 +10,19 @@ type MonitorAbortable struct {
 }
 
 func (ma *MonitorAbortable) Abort() {
-	log.Debug().
-		Str("monitored_pid", ma.pid.String()).
-		Str("monitor_pid", ma.self.String()).
-		Msg("demonitoring pid")
+	logger.Debug("demonitoring pid",
+		"monitored_pid", ma.pid.String(),
+		"monitor_pid", ma.self.String(),
+	)
 
 	go func() {
 		if ma.pid.MachineId != machineId {
 			//Monitor is not on this machine
 
-			log.Debug().
-				Str("monitored_pid", ma.pid.String()).
-				Str("monitor_pid", ma.self.String()).
-				Str("machine_id", ma.pid.MachineId).
-				Msg("monitor to abort is not on this machine, forwarding to remote machine")
+			logger.Debug("monitor to abort is not on this machine, forwarding to remote machine",
+				"monitored_pid", ma.pid.String(),
+				"monitor_pid", ma.self.String(),
+				"machine_id", ma.pid.MachineId)
 
 			m, ok := getMachine(ma.pid.MachineId)
 
@@ -37,11 +32,10 @@ func (ma *MonitorAbortable) Abort() {
 				return
 			}
 
-			log.Warn().
-				Str("monitored_pid", ma.pid.String()).
-				Str("monitor_pid", ma.self.String()).
-				Str("machine_id", ma.pid.MachineId).
-				Msg("remote machine is not registered, couldn't abort monitor")
+			logger.Warn("remote machine is not registered, couldn't abort monitor",
+				"monitored_pid", ma.pid.String(),
+				"monitor_pid", ma.self.String(),
+				"machine_id", ma.pid.MachineId)
 
 			return
 		}
@@ -50,10 +44,9 @@ func (ma *MonitorAbortable) Abort() {
 		defer ma.pid.demonitorChanMu.RUnlock()
 
 		if ma.pid.demonitorChan == nil {
-			log.Warn().
-				Str("monitored_pid", ma.pid.String()).
-				Str("monitor_pid", ma.self.String()).
-				Msg("pid to demonitor is already down")
+			logger.Warn("pid to demonitor is already down",
+				"monitored_pid", ma.pid.String(),
+				"monitor_pid", ma.self.String())
 			return
 		}
 

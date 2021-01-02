@@ -1,9 +1,5 @@
 package quacktors
 
-import (
-	"github.com/rs/zerolog/log"
-)
-
 type Actor interface {
 	Init(ctx *Context)
 	Run(ctx *Context, message Message)
@@ -70,13 +66,15 @@ func startActor(actor Actor) *Pid {
 	monitorQuitChannels := make(map[string]chan bool)
 
 	pid := createPid(quitChan, messageChan, monitorChan, demonitorChan, scheduled, monitorQuitChannels)
-	ctx := &Context{self: pid}
+	ctx := &Context{
+		self:   pid,
+		Logger: contextLogger{pid: pid.Id},
+	}
 
 	actor.Init(ctx)
 
-	log.Info().
-		Str("pid", pid.String()).
-		Msg("starting actor")
+	logger.Info("starting actor",
+		"pid", pid.String())
 
 	go func() {
 		defer func() {
@@ -88,32 +86,28 @@ func startActor(actor Actor) *Pid {
 		for {
 			select {
 			case <-quitChan:
-				log.Info().
-					Str("pid", pid.String()).
-					Msg("actor received quit event")
+				logger.Info("actor received quit event",
+					"pid", pid.String())
 				return
 			case message := <-messageChan:
 				switch message.(type) {
 				case PoisonPill:
-					log.Info().
-						Str("pid", pid.String()).
-						Msg("actor received poison pill")
+					logger.Info("actor received poison pill",
+						"pid", pid.String())
 					//Quit actor on PoisonPill message
 					return
 				default:
 					actor.Run(ctx, message)
 				}
 			case monitor := <-monitorChan:
-				log.Info().
-					Str("pid", pid.String()).
-					Str("monitor", monitor.String()).
-					Msg("actor received monitor request")
+				logger.Info("actor received monitor request",
+					"pid", pid.String(),
+					"monitor", monitor.String())
 				pid.setupMonitor(monitor)
 			case monitor := <-demonitorChan:
-				log.Info().
-					Str("pid", pid.String()).
-					Str("monitor", monitor.String()).
-					Msg("actor received demonitor request")
+				logger.Info("actor received demonitor request",
+					"pid", pid.String(),
+					"monitor", monitor.String())
 				pid.removeMonitor(monitor)
 			}
 		}

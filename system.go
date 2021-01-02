@@ -4,7 +4,6 @@ import (
 	"errors"
 	"fmt"
 	"github.com/Azer0s/qpmd"
-	"github.com/rs/zerolog/log"
 	"net"
 	"sync"
 )
@@ -39,9 +38,8 @@ func (s *System) Close() {
 }
 
 func (s *System) startServer() (uint16, error) {
-	log.Debug().
-		Str("system_name", s.name).
-		Msg("starting system server")
+	logger.Debug("starting system server",
+		"system_name", s.name)
 
 	return startServer(func(portChan chan int, errorChan chan error) {
 		listener, err := net.Listen("tcp", ":0")
@@ -54,32 +52,28 @@ func (s *System) startServer() (uint16, error) {
 		port := listener.Addr().(*net.TCPAddr).Port
 		portChan <- port
 
-		log.Debug().
-			Str("system_name", s.name).
-			Msg("started system server successfully")
+		logger.Debug("started system server successfully",
+			"system_name", s.name)
 
 		for {
 			select {
 			case <-s.quitChan:
-				log.Info().
-					Str("system_name", s.name).
-					Msg("quitting system server")
+				logger.Info("quitting system server",
+					"system_name", s.name)
 				return
 			default:
 				conn, err := listener.Accept()
 				if err != nil {
-					log.Warn().
-						Str("system_name", s.name).
-						Err(err).
-						Msg("there was an error while accepting an incoming client for system")
+					logger.Warn("there was an error while accepting an incoming client for system",
+						"system_name", s.name,
+						"error", err)
 
 					continue
 				}
 
-				log.Info().
-					Str("system_name", s.name).
-					Str("client", conn.RemoteAddr().String()).
-					Msg("handling incoming client for system")
+				logger.Info("handling incoming client for system",
+					"system_name", s.name,
+					"client", conn.RemoteAddr().String())
 
 				go s.handleClient(conn)
 			}
@@ -93,10 +87,9 @@ func (s *System) handleClient(conn net.Conn) {
 	defer func() {
 		recover()
 
-		log.Info().
-			Str("system_name", s.name).
-			Str("client", c).
-			Msg("closing system server connection to client")
+		logger.Info("closing system server connection to client",
+			"system_name", s.name,
+			"client", c)
 
 		err := conn.Close()
 		if err != nil {
@@ -114,18 +107,16 @@ func (s *System) handleClient(conn net.Conn) {
 	case qpmd.REQUEST_HELLO:
 		//I'll leave the hello message for now. Maybe it'll be useful in the future
 		//(plus it's more consistent to machine to machine communication)
-		log.Info().
-			Str("system_name", s.name).
-			Str("client", c).
-			Msg("handling system server hello request")
+		logger.Info("handling system server hello request",
+			"system_name", s.name,
+			"client", c)
 
 		err = writeOk(conn, map[string]interface{}{})
 
 		if err != nil {
-			log.Warn().
-				Str("client", c).
-				Err(err).
-				Msg("there was an error while sending an ok message to a client")
+			logger.Warn("there was an error while sending ok message to client",
+				"client", c,
+				"error", err)
 		}
 	case qpmd.REQUEST_LOOKUP:
 		s.handlersMu.RLock()
@@ -133,11 +124,10 @@ func (s *System) handleClient(conn net.Conn) {
 
 		handlerName := req.Data[handler].(string)
 
-		log.Info().
-			Str("system_name", s.name).
-			Str("client", c).
-			Str("handler_name", handlerName).
-			Msg("handling system server lookup request")
+		logger.Info("handling system server lookup request",
+			"system_name", s.name,
+			"client", c,
+			"handler_name", handlerName)
 
 		h, ok := s.handlers[handlerName]
 
@@ -147,28 +137,25 @@ func (s *System) handleClient(conn net.Conn) {
 			})
 
 			if err != nil {
-				log.Warn().
-					Str("client", c).
-					Err(err).
-					Msg("there was an error while sending an ok message to a client")
+				logger.Warn("there was an error while sending ok message to client",
+					"client", c,
+					"error", err)
 			}
 
 			return
 		}
 
-		log.Warn().
-			Str("system_name", s.name).
-			Str("client", c).
-			Str("handler_name", handlerName).
-			Msg("couldn't find handler for system server lookup request")
+		logger.Warn("couldn't find handler for system server lookup request",
+			"system_name", s.name,
+			"client", c,
+			"handler_name", handlerName)
 
 		err = writeError(conn, errors.New(fmt.Sprintf("couldn't find handler %s", handlerName)))
 
 		if err != nil {
-			log.Warn().
-				Str("client", c).
-				Err(err).
-				Msg("there was an error while sending an error message to a client")
+			logger.Warn("there was an error while sending error message to client",
+				"client", c,
+				"error", err)
 		}
 	}
 }
