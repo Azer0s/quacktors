@@ -70,7 +70,7 @@ Wait()
 
 ### Location transparency
 
-Sending messages in quacktors is completely location transparent, meaning no more worrying about connections, marshalling, unmarshalling, error handling and all that other boring stuff. Just send what you want to send to whoever you want to send it to. It's that easy.
+Sending messages in quacktors is completely location transparent, meaning no more worrying about connections, marshalling, unmarshalling, error handling and all that other boring stuff. Just send what you want to whoever you want to send it to. It's that easy.
 
 ### Floating PIDs
 
