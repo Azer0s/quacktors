@@ -140,6 +140,10 @@ func (pid *Pid) String() string {
 	return fmt.Sprintf("%s@%s", pid.Id, pid.MachineId)
 }
 
+func (pid Pid) Type() string {
+	return "pid"
+}
+
 func (pid *Pid) die() {
 	logger.Debug("sending quit command to actor",
 		"pid", pid.String())

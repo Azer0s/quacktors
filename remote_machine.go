@@ -23,6 +23,7 @@ const messageVal = "message"
 const machineVal = "machine"
 
 type Machine struct {
+	conntected         bool
 	MachineId          string
 	Address            string
 	MessageGatewayPort uint16
@@ -39,7 +40,9 @@ type Machine struct {
 
 func (m *Machine) stop() {
 	go func() {
-		logger.Info("stopping connection to remote machine",
+		m.conntected = false
+
+		logger.Info("stopping connections to remote machine",
 			"machine_id", m.MachineId)
 
 		m.gatewayQuitChan <- true
@@ -97,6 +100,8 @@ func startMessageClient(m *Machine, messageChan <-chan remoteMessageTuple, gatew
 				m.stop()
 			}
 		case <-gatewayQuitChan:
+			logger.Info("closing connection to remote message gateway",
+				"machine_id", m.MachineId)
 			_ = conn.Close()
 			return
 		}
@@ -207,6 +212,8 @@ func startGpClient(m *Machine, gpQuitChan <-chan bool, quitChan <-chan *Pid, mon
 				m.stop()
 			}
 		case <-gpQuitChan:
+			logger.Info("closing connection to remote general purpose gateway",
+				"machine_id", m.MachineId)
 			_ = conn.Close()
 			return
 		}
@@ -266,6 +273,8 @@ func (m *Machine) connect() error {
 
 	logger.Info("successfully established connection to remote machine",
 		"machine_id", m.MachineId)
+
+	m.conntected = true
 
 	return nil
 }

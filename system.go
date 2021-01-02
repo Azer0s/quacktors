@@ -87,7 +87,7 @@ func (s *System) handleClient(conn net.Conn) {
 	defer func() {
 		recover()
 
-		logger.Info("closing system server connection to client",
+		logger.Debug("closing system server connection to client",
 			"system_name", s.name,
 			"client", c)
 
@@ -107,7 +107,7 @@ func (s *System) handleClient(conn net.Conn) {
 	case qpmd.REQUEST_HELLO:
 		//I'll leave the hello message for now. Maybe it'll be useful in the future
 		//(plus it's more consistent to machine to machine communication)
-		logger.Info("handling system server hello request",
+		logger.Debug("handling system server hello request",
 			"system_name", s.name,
 			"client", c)
 
@@ -124,7 +124,7 @@ func (s *System) handleClient(conn net.Conn) {
 
 		handlerName := req.Data[handler].(string)
 
-		logger.Info("handling system server lookup request",
+		logger.Debug("handling system server lookup request",
 			"system_name", s.name,
 			"client", c,
 			"handler_name", handlerName)

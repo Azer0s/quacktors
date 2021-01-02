@@ -68,6 +68,7 @@ func initializeQpmdConnection() {
 }
 
 func initializeBuiltInMessages() {
+	RegisterType(Pid{})
 	RegisterType(DownMessage{})
 	RegisterType(PoisonPill{})
 	RegisterType(GenericMessage{})

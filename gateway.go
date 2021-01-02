@@ -230,6 +230,12 @@ func handleGpClient(conn net.Conn) {
 		return
 	}
 
+	defer func() {
+		if m.conntected {
+			m.stop()
+		}
+	}()
+
 	for {
 		r, err := readRequest(conn)
 
