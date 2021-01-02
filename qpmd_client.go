@@ -48,6 +48,8 @@ func qpmdRegister(system *System, systemPort uint16) (net.Conn, error) {
 
 func qpmdHeartbeat(conn net.Conn, system *System) {
 	quit := func() {
+		log.Error().
+			Msg("qpmd heartbeat was quit unexpectedly serverside, is qpmd still running?")
 		system.quitChan <- true
 		system.closed = true
 	}
