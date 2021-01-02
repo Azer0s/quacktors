@@ -21,7 +21,7 @@ func RegisterType(message Message) {
 		panic("message.Type() can not return an empty string")
 	}
 
-	gob.Register(message)
+	gob.RegisterName(message.Type(), message)
 
 	log.Info().
 		Str("type", message.Type()).

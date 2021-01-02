@@ -12,7 +12,7 @@ func TestMonitorWithKill(t *testing.T) {
 
 	p := Spawn(func(ctx *Context, message Message) {
 		switch m := message.(type) {
-		case *GenericMessage:
+		case GenericMessage:
 			fmt.Println(m.Value)
 		}
 	})
@@ -21,7 +21,7 @@ func TestMonitorWithKill(t *testing.T) {
 		ctx.Monitor(p)
 	}, func(ctx *Context, message Message) {
 		switch m := message.(type) {
-		case *DownMessage:
+		case DownMessage:
 			assert.Equal(t, p.String(), m.Who.String())
 			fmt.Println("Actor went down!")
 			ctx.Quit()
@@ -40,7 +40,7 @@ func TestMonitorWithPoisonPill(t *testing.T) {
 
 	p := Spawn(func(ctx *Context, message Message) {
 		switch m := message.(type) {
-		case *GenericMessage:
+		case GenericMessage:
 			fmt.Println(m.Value)
 		}
 	})
@@ -49,7 +49,7 @@ func TestMonitorWithPoisonPill(t *testing.T) {
 		ctx.Monitor(p)
 	}, func(ctx *Context, message Message) {
 		switch m := message.(type) {
-		case *DownMessage:
+		case DownMessage:
 			assert.Equal(t, p.String(), m.Who.String())
 			fmt.Println("Actor went down!")
 			ctx.Quit()
@@ -68,7 +68,7 @@ func TestMonitorAbortable_Abort(t *testing.T) {
 
 	p := Spawn(func(ctx *Context, message Message) {
 		switch m := message.(type) {
-		case *GenericMessage:
+		case GenericMessage:
 			fmt.Println(m.Value)
 		}
 	})
@@ -79,10 +79,10 @@ func TestMonitorAbortable_Abort(t *testing.T) {
 		a = ctx.Monitor(p)
 	}, func(ctx *Context, message Message) {
 		switch message.(type) {
-		case *DownMessage:
+		case DownMessage:
 			fmt.Println(":(")
 			t.Fail()
-		case *GenericMessage:
+		case GenericMessage:
 			fmt.Println("Worked")
 			ctx.Quit()
 		}
@@ -197,6 +197,28 @@ func TestConnectRemoteKill(t *testing.T) {
 	}
 
 	rootCtx.Kill(p)
+
+	<-time.After(50 * time.Millisecond)
+}
+
+func TestConnectPoisonPill(t *testing.T) {
+	rootCtx := RootContext()
+
+	r, err := Connect("test@localhost")
+
+	if err != nil {
+		t.Fail()
+		return
+	}
+
+	p, err := r.Remote("printer")
+
+	if err != nil {
+		t.Fail()
+		return
+	}
+
+	rootCtx.Send(p, PoisonPill{})
 
 	<-time.After(50 * time.Millisecond)
 }

@@ -89,7 +89,7 @@ func (pid *Pid) cleanup() {
 
 	log.Debug().
 		Str("pid_id", pid.Id).
-		Msg("deleting monitor abort channels after pid cleanup")
+		Msg("deleting monitor abort channels")
 
 	//Delete monitorQuitChannels
 	for n, c := range pid.monitorQuitChannels {

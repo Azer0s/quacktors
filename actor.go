@@ -94,7 +94,7 @@ func startActor(actor Actor) *Pid {
 				return
 			case message := <-messageChan:
 				switch message.(type) {
-				case *PoisonPill:
+				case PoisonPill:
 					log.Info().
 						Str("pid", pid.String()).
 						Msg("actor received poison pill")
