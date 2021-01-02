@@ -13,7 +13,7 @@ pid := quacktors.Spawn(func(ctx *Context, message Message) {
     fmt.Println("Hello, quacktors!")
 })
 
-rootCtx.Send(pid, &EmptyMessage{})
+rootCtx.Send(pid, EmptyMessage{})
 ```
 
 <br>
@@ -25,7 +25,7 @@ foo := quacktors.NewSystem("foo")
 
 pid := quacktors.Spawn(func(ctx *Context, message Message) {
     switch m := message.(type) {
-    case *GenericMessage:
+    case GenericMessage:
         fmt.Println(m.Value)
     }
 })
@@ -41,5 +41,5 @@ rootCtx := quacktors.RootContext()
 node := quacktors.Connect("foo@localhost")
 printer, ok := node.Remote("printer")
 
-rootCtx.Send(printer, &GenericMessage{Value: "Hello, world"})
+rootCtx.Send(printer, GenericMessage{Value: "Hello, world"})
 ```
