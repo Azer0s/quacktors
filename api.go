@@ -1,71 +1,144 @@
 package quacktors
 
 import (
-	"github.com/Azer0s/quacktors/actors"
-	"github.com/Azer0s/quacktors/node"
-	"github.com/Azer0s/quacktors/pid"
-	"github.com/Azer0s/quacktors/util"
+	"encoding/gob"
+	"errors"
+	"github.com/rs/zerolog/log"
+	"reflect"
+	"regexp"
+	"strings"
 	"sync"
 )
 
-// Self returns the PID of the caller goroutine/actor
-func Self() pid.Pid {
-	goid := util.GetGoid()
-	p, err := actors.GetByGoid(goid)
+func RegisterType(message Message) {
+	t := reflect.ValueOf(message).Type().Kind()
+
+	if t == reflect.Ptr {
+		panic("RegisterType cannot be called with a pointer to a Message")
+	}
+
+	if message.Type() == "" {
+		panic("message.Type() can not return an empty string")
+	}
+
+	gob.Register(message)
+
+	log.Info().
+		Str("type", message.Type()).
+		Msg("registered type")
+}
+
+func RootContext() Context {
+	return Context{}
+}
+
+func Spawn(action func(ctx *Context, message Message)) *Pid {
+	return startActor(&StatelessActor{
+		initFunction:    func(ctx *Context) {},
+		receiveFunction: action,
+	})
+}
+
+func SpawnWithInit(init func(ctx *Context), action func(ctx *Context, message Message)) *Pid {
+	return startActor(&StatelessActor{
+		initFunction:    init,
+		receiveFunction: action,
+	})
+}
+
+func SpawnStateful(actor Actor) *Pid {
+	return startActor(actor)
+}
+
+func NewSystem(name string) (*System, error) {
+	log.Info().
+		Str("system_name", name).
+		Msg("initializing new system")
+
+	s := &System{
+		name:              name,
+		handlers:          map[string]*Pid{},
+		handlersMu:        &sync.RWMutex{},
+		quitChan:          make(chan bool),
+		heartbeatQuitChan: make(chan bool),
+	}
+	p, err := s.startServer()
 
 	if err != nil {
-		p = pid.NewPid()
-		actors.StoreByGoid(goid, p)
+		log.Warn().
+			Str("system_name", s.name).
+			Err(err).
+			Msg("there was an error while starting the system server")
+		return &System{}, err
 	}
 
-	return p
-}
+	conn, err := qpmdRegister(s, p)
 
-// Spawn spawns an actor by a function and returns the actors PID
-func Spawn(action func()) pid.Pid {
-	return actors.Spawn(action)
-}
-
-// Send sends data to a PID, this is a non-blocking call
-func Send(pid pid.Pid, data interface{}) {
-	go pid.Send(data)
-}
-
-// Receive receives data sent to the caller goroutine/actor, this is a blocking call
-func Receive() interface{} {
-	p := Self()
-	return util.PidToLocalPid(p).Receive()
-}
-
-// Monitor monitors a PID, when the state of the monitored PID goes down, a message is sent to the monitoring actor
-func Monitor(toMonitor pid.Pid) {
-	p := Self()
-
-	if !toMonitor.Up() {
-		panic("Actor to monitor is down!")
+	if err != nil {
+		log.Warn().
+			Str("system_name", s.name).
+			Err(err).
+			Msg("there was an error while registering system to qpmd")
+		return &System{}, err
 	}
 
-	toMonitor.Monitor(p)
+	qpmdHeartbeat(conn, s)
+
+	return s, nil
 }
 
-func StartGateway(port int) {
-	node.SetRemotePort(port)
+func Connect(name string) (*RemoteSystem, error) {
+	matched, err := regexp.MatchString("(\\w+)@(.+)", name)
 
-	go func() {
-		wg := sync.WaitGroup{}
-		for {
-			wg.Add(1)
-			go func() {
-				defer func() {
-					if r := recover(); r != nil {
-						//ignored
-					}
-				}()
+	if !matched || err != nil {
+		return &RemoteSystem{}, errors.New("invalid connection string format")
+	}
 
-				node.StartLink()
-				wg.Done()
-			}()
-			wg.Wait()
+	s := strings.SplitN(name, "@", 2)
+
+	log.Info().
+		Str("system_name", s[0]).
+		Str("remote_address", s[1]).
+		Msg("connecting to remote system")
+
+	r, err := qpmdLookup(s[0], s[1])
+
+	if err != nil {
+		log.Warn().
+			Str("system_name", s[0]).
+			Str("remote_address", s[1]).
+			Err(err).
+			Msg("there was an error while looking up remote system")
+		return &RemoteSystem{}, err
+	}
+
+	if r.MachineId == machineId {
+		panic("can't connect to system, system is on the same quacktor instance")
+	}
+
+	if m, ok := getMachine(r.MachineId); ok {
+		r.Machine = m
+	} else {
+		//start connections to remote machine
+
+		log.Warn().
+			Str("machine_id", r.MachineId).
+			Msg("remote machine is not yet connected")
+
+		err := r.Machine.connect()
+
+		if err != nil {
+			return &RemoteSystem{}, err
 		}
-	}()
+
+		registerMachine(r.Machine)
+	}
+
+	err = r.sayHello()
+
+	if err != nil {
+		return &RemoteSystem{}, err
+	}
+
+	return r, nil
 }
