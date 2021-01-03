@@ -19,9 +19,14 @@ func (s *StatelessActor) Run(ctx *Context, message Message) {
 }
 
 func doSend(to *Pid, message Message) {
+	returnChan := make(chan bool)
+
 	go func() {
 		if to.MachineId != machineId {
 			//Pid is not on this machine
+
+			//Since we can't really guarantee message ordering to remote systems, this will have to do
+			returnChan <- true
 
 			m, ok := getMachine(to.MachineId)
 
@@ -39,6 +44,10 @@ func doSend(to *Pid, message Message) {
 		to.messageChanMu.RLock()
 		defer to.messageChanMu.RUnlock()
 
+		//As soon as we have acquired the lock, return
+		//This is to preserve message ordering
+		returnChan <- true
+
 		//If the actor has already quit, do nothing
 		if to.messageChan == nil {
 			//Maybe the current pid instance is just empty but the pid actually does exist on our local machine
@@ -54,6 +63,8 @@ func doSend(to *Pid, message Message) {
 
 		to.messageChan <- message
 	}()
+
+	<-returnChan
 }
 
 func startActor(actor Actor) *Pid {
