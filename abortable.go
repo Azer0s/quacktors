@@ -26,7 +26,7 @@ func (ma *MonitorAbortable) Abort() {
 
 			m, ok := getMachine(ma.pid.MachineId)
 
-			if ok {
+			if ok && m.conntected {
 				//send demonitor request to demonitor channel on the machine connection
 				m.demonitorChan <- remoteMonitorTuple{From: ma.self, To: ma.pid}
 				return

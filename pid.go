@@ -35,7 +35,7 @@ func createPid(quitChan chan<- bool, messageChan chan<- Message, monitorChan cha
 }
 
 func (pid *Pid) cleanup() {
-	logger.Info("cleaning up pid",
+	logger.Debug("cleaning up pid",
 		"pid_id", pid.Id)
 
 	deletePid(pid.Id)

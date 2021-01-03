@@ -37,7 +37,7 @@ func (c *Context) Kill(pid *Pid) {
 
 			m, ok := getMachine(pid.MachineId)
 
-			if ok {
+			if ok && m.conntected {
 				m.quitChan <- pid
 				return
 			}
@@ -54,7 +54,7 @@ func (c *Context) Kill(pid *Pid) {
 }
 
 func (c *Context) Quit() {
-	panic("Bye cruel world!")
+	panic(quitAction{})
 }
 
 func (c *Context) Monitor(pid *Pid) Abortable {
@@ -73,7 +73,7 @@ func (c *Context) Monitor(pid *Pid) Abortable {
 				"machine_id", pid.MachineId)
 
 			m, ok := getMachine(pid.MachineId)
-			if ok {
+			if ok && m.conntected {
 				okChan <- true
 
 				m.monitorChan <- remoteMonitorTuple{From: c.self, To: pid}

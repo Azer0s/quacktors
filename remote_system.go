@@ -45,6 +45,10 @@ func (r *RemoteSystem) sayHello() error {
 }
 
 func (r *RemoteSystem) Remote(handlerName string) (*Pid, error) {
+	if !r.Machine.conntected {
+		return nil, errors.New("remote machine is not connected")
+	}
+
 	conn, err := net.Dial("tcp", fmt.Sprintf("%s:%d", r.Address, r.Port))
 	if err != nil {
 		return nil, err

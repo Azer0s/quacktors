@@ -7,6 +7,39 @@ import (
 	"time"
 )
 
+func TestMessageOrdering(t *testing.T) {
+	rootCtx := RootContext()
+
+	testChan := make(chan string, 40000)
+
+	i := 1
+
+	pid := Spawn(func(ctx *Context, message Message) {
+		switch m := message.(type) {
+		case GenericMessage:
+			fmt.Println(i)
+			i++
+			testChan <- m.Value.(string)
+		}
+	})
+
+	for i := 0; i < 10000; i++ {
+		rootCtx.Send(pid, GenericMessage{Value: "Hello"})
+		rootCtx.Send(pid, GenericMessage{Value: "Foo"})
+		rootCtx.Send(pid, GenericMessage{Value: "Bar"})
+	}
+
+	for i := 0; i < 10000; i++ {
+		assert.Equal(t, "Hello", <-testChan)
+		assert.Equal(t, "Foo", <-testChan)
+		assert.Equal(t, "Bar", <-testChan)
+	}
+
+	rootCtx.Send(pid, PoisonPill{})
+
+	Wait()
+}
+
 func TestMonitorWithKill(t *testing.T) {
 	rootCtx := RootContext()
 

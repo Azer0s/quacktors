@@ -40,17 +40,19 @@ type Machine struct {
 
 func (m *Machine) stop() {
 	go func() {
-		m.conntected = false
-
 		logger.Info("stopping connections to remote machine",
 			"machine_id", m.MachineId)
+
+		m.conntected = false
+
+		deleteMachine(m.MachineId)
 
 		m.gatewayQuitChan <- true
 		m.gpQuitChan <- true
 
-		//TODO: notify monitors
+		close(m.messageChan)
 
-		deleteMachine(m.MachineId)
+		//TODO: notify monitors
 	}()
 }
 
@@ -221,6 +223,19 @@ func startGpClient(m *Machine, gpQuitChan <-chan bool, quitChan <-chan *Pid, mon
 }
 
 func (m *Machine) connect() error {
+	//quitChan, monitorChan, demonitorChan and newConnectionChan each have buffers of 100
+	//this is a, sort of, "close protection" for when a remote machine disconnects
+
+	//there is a short time frame (i.e. a couple ns) where the *Machine is closing
+	//but is not yet marked "closed" or deleted from the machine register
+	//in a couple ns, nothing much can happen really (if there are a lot of actors open,
+	//maybe 1 or 2 will manage to send out some commands to the dangling *Machine)
+	//this buffer is there as a precaution to avoid leaking goroutines (because as soon as the
+	//machine is dereferenced, the channels get garbage collected and the machine has to be
+	//dereferenced at some point because it's then only attached to the RemoteSystem instance which
+	//will return an error once used again, forcing the application to reconnect and destroying
+	//the old Machine ptr)
+
 	quitChan := make(chan *Pid, 100)
 	messageChan := make(chan remoteMessageTuple, 2000)
 	monitorChan := make(chan remoteMonitorTuple, 100)

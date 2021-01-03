@@ -24,15 +24,22 @@ func doSend(to *Pid, message Message) {
 	returnChan := make(chan bool)
 
 	go func() {
+		defer func() {
+			if r := recover(); r != nil {
+				//This happens if we write to the messageChan while the actor or remote connection is being closed
+			}
+
+			//As soon as we have put the message into the buffered messageChan, return
+			//This is to preserve message ordering
+			returnChan <- true
+		}()
+
 		if to.MachineId != machineId {
 			//Pid is not on this machine
 
-			//Since we can't really guarantee message ordering to remote systems, this will have to do
-			returnChan <- true
-
 			m, ok := getMachine(to.MachineId)
 
-			if ok {
+			if ok && m.conntected {
 				m.messageChan <- remoteMessageTuple{
 					To:      to,
 					Message: message,
@@ -42,12 +49,6 @@ func doSend(to *Pid, message Message) {
 			return
 		}
 
-		defer func() {
-			if r := recover(); r != nil {
-				//This happens if we write to the messageChan while the actor is being closed
-			}
-		}()
-
 		//If the actor has already quit, do nothing
 		if to.messageChan == nil {
 			//Maybe the current pid instance is just empty but the pid actually does exist on our local machine
@@ -56,17 +57,12 @@ func doSend(to *Pid, message Message) {
 
 			if ok {
 				p.messageChan <- message
-				returnChan <- true
 			}
 
 			return
 		}
 
 		to.messageChan <- message
-
-		//As soon as we have put the message into the buffered messageChan, return
-		//This is to preserve message ordering
-		returnChan <- true
 	}()
 
 	<-returnChan
@@ -97,10 +93,15 @@ func startActor(actor Actor) *Pid {
 		defer func() {
 			//We don't want to forward a panic
 			if r := recover(); r != nil {
-				//if we did pick up a panic, log it
-				logger.Warn("actor quit due to panic",
-					"pid", pid.String(),
-					"panic", r)
+				if _, ok := r.(quitAction); ok {
+					logger.Info("actor quit",
+						"pid", pid.String())
+				} else {
+					//if we did pick up a panic, log it
+					logger.Warn("actor quit due to panic",
+						"pid", pid.String(),
+						"panic", r)
+				}
 			}
 			pid.cleanup()
 		}()

@@ -9,6 +9,8 @@ import (
 	"time"
 )
 
+type quitAction struct{}
+
 type remoteMonitorTuple struct {
 	From *Pid
 	To   *Pid

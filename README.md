@@ -117,6 +117,14 @@ rootCtx.Send(ping, *pong)
 Wait()
 ```
 
+### On message order and reception
+
+In quacktors, message order is guaranteed from one actor to another. Meaning that if you send messages from A to B, they will arrive in order. The same is true for remote actors.
+
+For multiple actors (A, B & C send messages to D), we can't make that guarantee because we don't know when each actor will execute.
+
+As with basically all other actor systems, there is no guarantee (or even acknowledgement) that a message has been received. `Send` is a non-blocking call and doesn't return anything (even if the sending procedure failed).
+
 ### Configuring quacktors
 
 quacktors has some configuration options which can be set by using the `config` package during `init`.
