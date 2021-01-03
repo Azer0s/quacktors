@@ -25,7 +25,7 @@ func (r *RemoteSystem) sayHello() error {
 
 	err = sendRequest(conn, qpmd.Request{
 		RequestType: qpmd.REQUEST_HELLO,
-		Data:        map[string]interface{}{},
+		Data:        make(map[string]interface{}),
 	})
 
 	if err != nil {

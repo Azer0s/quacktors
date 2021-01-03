@@ -190,6 +190,25 @@ func TestNewSystemWithHandler(t *testing.T) {
 	Wait()
 }
 
+func TestContext_MonitorMachine(t *testing.T) {
+	r, err := Connect("test@localhost")
+
+	if err != nil {
+		t.Fail()
+		return
+	}
+
+	SpawnWithInit(func(ctx *Context) {
+		a := ctx.MonitorMachine(r.Machine)
+		a.Abort()
+	}, func(ctx *Context, message Message) {
+		fmt.Println(message)
+		ctx.Quit()
+	})
+
+	Wait()
+}
+
 func TestConnect(t *testing.T) {
 	rootCtx := RootContext()
 

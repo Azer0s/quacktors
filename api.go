@@ -81,7 +81,7 @@ func NewSystem(name string) (*System, error) {
 
 	s := &System{
 		name:              name,
-		handlers:          map[string]*Pid{},
+		handlers:          make(map[string]*Pid),
 		handlersMu:        &sync.RWMutex{},
 		quitChan:          make(chan bool),
 		heartbeatQuitChan: make(chan bool),

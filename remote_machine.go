@@ -8,6 +8,7 @@ import (
 	"github.com/Azer0s/qpmd"
 	"github.com/vmihailenco/msgpack/v5"
 	"net"
+	"sync"
 )
 
 const quitMessageType = "quit"
@@ -35,15 +36,19 @@ type Machine struct {
 	monitorChan        chan<- remoteMonitorTuple
 	demonitorChan      chan<- remoteMonitorTuple
 	newConnectionChan  chan<- *Machine
-	scheduled          map[string]chan bool
+	//Stores channels to scheduled monitors
+	scheduled map[string]chan bool
+	//Stores channels to tell a monitor task to quit (when a pid is demonitored)
+	monitorQuitChannels map[string]chan bool
+	monitorsMu          *sync.Mutex
 }
 
 func (m *Machine) stop() {
 	go func() {
+		m.conntected = false
+
 		logger.Info("stopping connections to remote machine",
 			"machine_id", m.MachineId)
-
-		m.conntected = false
 
 		deleteMachine(m.MachineId)
 
@@ -52,7 +57,49 @@ func (m *Machine) stop() {
 
 		close(m.messageChan)
 
-		//TODO: notify monitors
+		m.monitorsMu.Lock()
+		defer m.monitorsMu.Unlock()
+
+		//Terminate all scheduled events/send down message to monitor tasks
+		logger.Debug("sending out scheduled events after remote machine disconnect",
+			"machine_id", m.MachineId)
+
+		for k, ch := range m.scheduled {
+			ch <- true
+			close(ch)
+			delete(m.scheduled, k)
+		}
+
+		logger.Debug("deleting machine connection monitor abort channels",
+			"machine_id", m.MachineId)
+
+		//Delete monitorQuitChannels
+		for n, c := range m.monitorQuitChannels {
+			close(c)
+			delete(m.monitorQuitChannels, n)
+		}
+		m.monitorQuitChannels = nil
+
+		//TODO: notify actors that monitor remote actors
+	}()
+}
+
+func (m *Machine) setupMonitor(monitor *Pid) {
+	name := monitor.String()
+
+	monitorChannel := make(chan bool)
+	m.scheduled[name] = monitorChannel
+
+	monitorQuitChannel := make(chan bool)
+	m.monitorQuitChannels[name] = monitorQuitChannel
+
+	go func() {
+		select {
+		case <-monitorQuitChannel:
+			return
+		case <-monitorChannel:
+			doSend(monitor, DisconnectMessage{MachineId: m.MachineId, Address: m.Address})
+		}
 	}()
 }
 
@@ -248,9 +295,13 @@ func (m *Machine) connect() error {
 	m.demonitorChan = demonitorChan
 	m.newConnectionChan = newConnectionChan
 
-	//Buffer size of 1 to avoid leaks if both connections fail
-	gatewayQuitChan := make(chan bool, 1)
-	gpQuitChan := make(chan bool, 1)
+	m.scheduled = make(map[string]chan bool)
+	m.monitorQuitChannels = make(map[string]chan bool)
+	m.monitorsMu = &sync.Mutex{}
+
+	//Buffer size of 2 to avoid leaks if both connections fail
+	gatewayQuitChan := make(chan bool, 2)
+	gpQuitChan := make(chan bool, 2)
 
 	m.gatewayQuitChan = gatewayQuitChan
 	m.gpQuitChan = gpQuitChan

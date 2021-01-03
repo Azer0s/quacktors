@@ -57,7 +57,7 @@ func qpmdHeartbeat(conn net.Conn, system *System) {
 			case <-time.After(25 * time.Second):
 				err := sendRequest(conn, qpmd.Request{
 					RequestType: qpmd.HEARTBEAT,
-					Data:        map[string]interface{}{},
+					Data:        make(map[string]interface{}),
 				})
 				if err != nil {
 					quit()

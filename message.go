@@ -34,3 +34,12 @@ type EmptyMessage struct {
 func (e EmptyMessage) Type() string {
 	return "EmptyMessage"
 }
+
+type DisconnectMessage struct {
+	MachineId string
+	Address   string
+}
+
+func (d DisconnectMessage) Type() string {
+	return "DisconnectMessage"
+}

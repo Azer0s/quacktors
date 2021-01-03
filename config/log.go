@@ -66,7 +66,7 @@ func toMap(values ...interface{}) map[string]interface{} {
 		panic("invalid logging parameters")
 	}
 
-	vals := map[string]interface{}{}
+	vals := make(map[string]interface{})
 	for i := 0; i < len(values); i += 2 {
 		if k, ok := values[i].(string); ok {
 			vals[k] = values[i+1]

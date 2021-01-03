@@ -57,6 +57,33 @@ func (c *Context) Quit() {
 	panic(quitAction{})
 }
 
+func (c *Context) MonitorMachine(machine *Machine) Abortable {
+	machine.monitorsMu.Lock()
+	defer machine.monitorsMu.Unlock()
+
+	logger.Info("setting up machine connection monitor",
+		"monitored_machine", machine.MachineId,
+		"monitor_pid", c.self.String())
+
+	if !machine.conntected {
+		//The remote machine already disconnected, send a down message immediately
+
+		logger.Warn("monitored machine already disconnected, sending out DisconnectMessage to monitor immediately",
+			"monitored_machine", machine.MachineId,
+			"monitor_pid", c.self.String())
+
+		doSend(c.self, DisconnectMessage{MachineId: machine.MachineId, Address: machine.Address})
+		return &NoopAbortable{}
+	}
+
+	machine.setupMonitor(c.self)
+
+	return &MachineConnectionMonitorAbortable{
+		machine: machine,
+		monitor: c.self,
+	}
+}
+
 func (c *Context) Monitor(pid *Pid) Abortable {
 	errorChan := make(chan bool)
 	okChan := make(chan bool)

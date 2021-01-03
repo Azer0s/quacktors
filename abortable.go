@@ -12,8 +12,7 @@ type MonitorAbortable struct {
 func (ma *MonitorAbortable) Abort() {
 	logger.Debug("demonitoring pid",
 		"monitored_pid", ma.pid.String(),
-		"monitor_pid", ma.self.String(),
-	)
+		"monitor_pid", ma.self.String())
 
 	go func() {
 		if ma.pid.MachineId != machineId {
@@ -54,6 +53,37 @@ func (ma *MonitorAbortable) Abort() {
 		}
 
 		ma.pid.demonitorChan <- ma.self
+	}()
+}
+
+type MachineConnectionMonitorAbortable struct {
+	machine *Machine
+	monitor *Pid
+}
+
+func (ma *MachineConnectionMonitorAbortable) Abort() {
+	logger.Debug("demonitoring machine connection",
+		"machine_id", ma.machine.MachineId,
+		"monitor_pid", ma.monitor.String())
+
+	go func() {
+		ma.machine.monitorsMu.Lock()
+		defer ma.machine.monitorsMu.Unlock()
+
+		defer func() {
+			if r := recover(); r != nil {
+				//This happens if we write to the demonitorChan while the actor is being closed
+			}
+		}()
+
+		if !ma.machine.conntected {
+			logger.Warn("machine connection to demonitor is already down",
+				"machine_id", ma.machine.MachineId,
+				"monitor_pid", ma.monitor.String())
+			return
+		}
+
+		ma.machine.monitorQuitChannels[ma.monitor.String()] <- true
 	}()
 }
 
