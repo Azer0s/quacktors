@@ -2,7 +2,7 @@ package quacktors
 
 import (
 	"github.com/Azer0s/qpmd"
-	uuid "github.com/satori/go.uuid"
+	"github.com/gofrs/uuid"
 	"github.com/vmihailenco/msgpack/v5"
 	"net"
 	"strings"
@@ -26,7 +26,14 @@ func try(err error) {
 }
 
 func uuidString() string {
-	return strings.ReplaceAll(uuid.NewV4().String(), "-", "")
+	u, err := uuid.NewV4()
+
+	if err != nil {
+		//This really shouldn't EVER happen and if it does you're totally screwed anyways... ¯\_(ツ)_/¯
+		panic(err)
+	}
+
+	return strings.ReplaceAll(u.String(), "-", "")
 }
 
 func sendRequest(conn net.Conn, req qpmd.Request) error {
