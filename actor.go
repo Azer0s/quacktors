@@ -1,5 +1,7 @@
 package quacktors
 
+import "sync"
+
 type Actor interface {
 	Init(ctx *Context)
 	Run(ctx *Context, message Message)
@@ -81,8 +83,9 @@ func startActor(actor Actor) *Pid {
 
 	pid := createPid(quitChan, messageChan, monitorChan, demonitorChan, scheduled, monitorQuitChannels)
 	ctx := &Context{
-		self:   pid,
-		Logger: contextLogger{pid: pid.Id},
+		self:     pid,
+		Logger:   contextLogger{pid: pid.Id},
+		sendLock: &sync.Mutex{},
 	}
 
 	actor.Init(ctx)

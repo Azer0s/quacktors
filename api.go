@@ -38,8 +38,9 @@ func RegisterType(message Message) {
 }
 
 var rootContext = Context{
-	self:   &Pid{Id: "root"},
-	Logger: contextLogger{pid: "root"},
+	self:     &Pid{Id: "root"},
+	Logger:   contextLogger{pid: "root"},
+	sendLock: &sync.Mutex{},
 }
 
 func RootContext() Context {

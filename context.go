@@ -2,11 +2,13 @@ package quacktors
 
 import (
 	"reflect"
+	"sync"
 )
 
 type Context struct {
-	self   *Pid
-	Logger contextLogger
+	self     *Pid
+	sendLock *sync.Mutex
+	Logger   contextLogger
 }
 
 func (c *Context) Self() *Pid {
@@ -19,6 +21,9 @@ func (c *Context) Send(to *Pid, message Message) {
 	if t == reflect.Ptr {
 		panic("Send cannot be called with a pointer to a Message")
 	}
+
+	c.sendLock.Lock()
+	defer c.sendLock.Unlock()
 
 	doSend(to, message)
 }
