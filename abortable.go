@@ -25,7 +25,7 @@ func (ma *MonitorAbortable) Abort() {
 
 			m, ok := getMachine(ma.pid.MachineId)
 
-			if ok && m.conntected {
+			if ok && m.connected {
 				//send demonitor request to demonitor channel on the machine connection
 				m.demonitorChan <- remoteMonitorTuple{From: ma.self, To: ma.pid}
 				return
@@ -76,7 +76,7 @@ func (ma *MachineConnectionMonitorAbortable) Abort() {
 			}
 		}()
 
-		if !ma.machine.conntected {
+		if !ma.machine.connected {
 			logger.Warn("machine connection to demonitor is already down",
 				"machine_id", ma.machine.MachineId,
 				"monitor_pid", ma.monitor.String())

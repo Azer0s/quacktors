@@ -234,7 +234,7 @@ func handleGpClient(conn net.Conn) {
 		machine, ok := getMachine(m.MachineId)
 
 		if ok {
-			if machine.conntected {
+			if machine.connected {
 				machine.stop()
 			}
 		}

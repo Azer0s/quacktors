@@ -39,7 +39,7 @@ func doSend(to *Pid, message Message) {
 
 			m, ok := getMachine(to.MachineId)
 
-			if ok && m.conntected {
+			if ok && m.connected {
 				m.messageChan <- remoteMessageTuple{
 					To:      to,
 					Message: message,

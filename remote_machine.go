@@ -24,7 +24,7 @@ const messageVal = "message"
 const machineVal = "machine"
 
 type Machine struct {
-	conntected         bool
+	connected          bool
 	MachineId          string
 	Address            string
 	MessageGatewayPort uint16
@@ -45,7 +45,7 @@ type Machine struct {
 
 func (m *Machine) stop() {
 	go func() {
-		m.conntected = false
+		m.connected = false
 
 		logger.Info("stopping connections to remote machine",
 			"machine_id", m.MachineId)
@@ -340,7 +340,7 @@ func (m *Machine) connect() error {
 	logger.Info("successfully established connection to remote machine",
 		"machine_id", m.MachineId)
 
-	m.conntected = true
+	m.connected = true
 
 	return nil
 }

@@ -37,7 +37,7 @@ func (c *Context) Kill(pid *Pid) {
 
 			m, ok := getMachine(pid.MachineId)
 
-			if ok && m.conntected {
+			if ok && m.connected {
 				m.quitChan <- pid
 				return
 			}
@@ -65,7 +65,7 @@ func (c *Context) MonitorMachine(machine *Machine) Abortable {
 		"monitored_machine", machine.MachineId,
 		"monitor_pid", c.self.String())
 
-	if !machine.conntected {
+	if !machine.connected {
 		//The remote machine already disconnected, send a down message immediately
 
 		logger.Warn("monitored machine already disconnected, sending out DisconnectMessage to monitor immediately",
@@ -100,7 +100,7 @@ func (c *Context) Monitor(pid *Pid) Abortable {
 				"machine_id", pid.MachineId)
 
 			m, ok := getMachine(pid.MachineId)
-			if ok && m.conntected {
+			if ok && m.connected {
 				okChan <- true
 
 				m.monitorChan <- remoteMonitorTuple{From: c.self, To: pid}

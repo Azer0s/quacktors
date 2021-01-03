@@ -45,7 +45,7 @@ func (r *RemoteSystem) sayHello() error {
 }
 
 func (r *RemoteSystem) Remote(handlerName string) (*Pid, error) {
-	if !r.Machine.conntected {
+	if !r.Machine.connected {
 		return nil, errors.New("remote machine is not connected")
 	}
 
