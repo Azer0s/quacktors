@@ -4,12 +4,9 @@ import (
 	"errors"
 	"fmt"
 	"github.com/Azer0s/qpmd"
-	"github.com/Azer0s/quacktors/config"
 	"net"
 	"time"
 )
-
-var qpmdPort = config.GetQpmdPort()
 
 func qpmdRegister(system *System, systemPort uint16) (net.Conn, error) {
 	logger.Debug("registering system to qpmd",
