@@ -80,6 +80,7 @@ func startActor(actor Actor) *Pid {
 		defer func() {
 			//We don't want to forward a panic
 			recover()
+			//TODO: if we did pick up a panic, log it
 			pid.cleanup()
 		}()
 
