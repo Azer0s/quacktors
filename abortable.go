@@ -40,8 +40,11 @@ func (ma *MonitorAbortable) Abort() {
 			return
 		}
 
-		ma.pid.demonitorChanMu.RLock()
-		defer ma.pid.demonitorChanMu.RUnlock()
+		defer func() {
+			if r := recover(); r != nil {
+				//This happens if we write to the demonitorChan while the actor is being closed
+			}
+		}()
 
 		if ma.pid.demonitorChan == nil {
 			logger.Warn("pid to demonitor is already down",

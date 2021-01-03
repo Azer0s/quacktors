@@ -40,13 +40,11 @@ func doSend(to *Pid, message Message) {
 			return
 		}
 
-		//Lock the channel so we don't run into problems if we're in the middle of an actor quit
-		to.messageChanMu.RLock()
-		defer to.messageChanMu.RUnlock()
-
-		//As soon as we have acquired the lock, return
-		//This is to preserve message ordering
-		returnChan <- true
+		defer func() {
+			if r := recover(); r != nil {
+				//This happens if we write to the messageChan while the actor is being closed
+			}
+		}()
 
 		//If the actor has already quit, do nothing
 		if to.messageChan == nil {
@@ -56,12 +54,17 @@ func doSend(to *Pid, message Message) {
 
 			if ok {
 				p.messageChan <- message
+				returnChan <- true
 			}
 
 			return
 		}
 
 		to.messageChan <- message
+
+		//As soon as we have put the message into the buffered messageChan, return
+		//This is to preserve message ordering
+		returnChan <- true
 	}()
 
 	<-returnChan
