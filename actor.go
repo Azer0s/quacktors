@@ -96,8 +96,12 @@ func startActor(actor Actor) *Pid {
 	go func() {
 		defer func() {
 			//We don't want to forward a panic
-			recover()
-			//TODO: if we did pick up a panic, log it
+			if r := recover(); r != nil {
+				//if we did pick up a panic, log it
+				logger.Warn("actor quit due to panic",
+					"pid", pid.String(),
+					"panic", r)
+			}
 			pid.cleanup()
 		}()
 
