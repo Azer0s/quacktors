@@ -1,5 +1,7 @@
 package quacktors
 
+import "sync"
+
 type Actor interface {
 	Init(ctx *Context)
 	Run(ctx *Context, message Message)
@@ -19,13 +21,25 @@ func (s *StatelessActor) Run(ctx *Context, message Message) {
 }
 
 func doSend(to *Pid, message Message) {
+	returnChan := make(chan bool)
+
 	go func() {
+		defer func() {
+			if r := recover(); r != nil {
+				//This happens if we write to the messageChan while the actor or remote connection is being closed
+			}
+
+			//As soon as we have put the message into the buffered messageChan, return
+			//This is to preserve message ordering
+			returnChan <- true
+		}()
+
 		if to.MachineId != machineId {
 			//Pid is not on this machine
 
 			m, ok := getMachine(to.MachineId)
 
-			if ok {
+			if ok && m.connected {
 				m.messageChan <- remoteMessageTuple{
 					To:      to,
 					Message: message,
@@ -34,10 +48,6 @@ func doSend(to *Pid, message Message) {
 
 			return
 		}
-
-		//Lock the channel so we don't run into problems if we're in the middle of an actor quit
-		to.messageChanMu.RLock()
-		defer to.messageChanMu.RUnlock()
 
 		//If the actor has already quit, do nothing
 		if to.messageChan == nil {
@@ -54,6 +64,8 @@ func doSend(to *Pid, message Message) {
 
 		to.messageChan <- message
 	}()
+
+	<-returnChan
 }
 
 func startActor(actor Actor) *Pid {
@@ -67,8 +79,9 @@ func startActor(actor Actor) *Pid {
 
 	pid := createPid(quitChan, messageChan, monitorChan, demonitorChan, scheduled, monitorQuitChannels)
 	ctx := &Context{
-		self:   pid,
-		Logger: contextLogger{pid: pid.Id},
+		self:     pid,
+		Logger:   contextLogger{pid: pid.Id},
+		sendLock: &sync.Mutex{},
 	}
 
 	actor.Init(ctx)
@@ -79,7 +92,17 @@ func startActor(actor Actor) *Pid {
 	go func() {
 		defer func() {
 			//We don't want to forward a panic
-			recover()
+			if r := recover(); r != nil {
+				if _, ok := r.(quitAction); ok {
+					logger.Info("actor quit",
+						"pid", pid.String())
+				} else {
+					//if we did pick up a panic, log it
+					logger.Warn("actor quit due to panic",
+						"pid", pid.String(),
+						"panic", r)
+				}
+			}
 			pid.cleanup()
 		}()
 

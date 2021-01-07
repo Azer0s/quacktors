@@ -2,11 +2,13 @@ package quacktors
 
 import (
 	"reflect"
+	"sync"
 )
 
 type Context struct {
-	self   *Pid
-	Logger contextLogger
+	self     *Pid
+	sendLock *sync.Mutex
+	Logger   contextLogger
 }
 
 func (c *Context) Self() *Pid {
@@ -20,6 +22,9 @@ func (c *Context) Send(to *Pid, message Message) {
 		panic("Send cannot be called with a pointer to a Message")
 	}
 
+	c.sendLock.Lock()
+	defer c.sendLock.Unlock()
+
 	doSend(to, message)
 }
 
@@ -32,7 +37,7 @@ func (c *Context) Kill(pid *Pid) {
 
 			m, ok := getMachine(pid.MachineId)
 
-			if ok {
+			if ok && m.connected {
 				m.quitChan <- pid
 				return
 			}
@@ -49,7 +54,34 @@ func (c *Context) Kill(pid *Pid) {
 }
 
 func (c *Context) Quit() {
-	panic("Bye cruel world!")
+	panic(quitAction{})
+}
+
+func (c *Context) MonitorMachine(machine *Machine) Abortable {
+	machine.monitorsMu.Lock()
+	defer machine.monitorsMu.Unlock()
+
+	logger.Info("setting up machine connection monitor",
+		"monitored_machine", machine.MachineId,
+		"monitor_pid", c.self.String())
+
+	if !machine.connected {
+		//The remote machine already disconnected, send a down message immediately
+
+		logger.Warn("monitored machine already disconnected, sending out DisconnectMessage to monitor immediately",
+			"monitored_machine", machine.MachineId,
+			"monitor_pid", c.self.String())
+
+		doSend(c.self, DisconnectMessage{MachineId: machine.MachineId, Address: machine.Address})
+		return &NoopAbortable{}
+	}
+
+	machine.setupMonitor(c.self)
+
+	return &MachineConnectionMonitorAbortable{
+		machine: machine,
+		monitor: c.self,
+	}
 }
 
 func (c *Context) Monitor(pid *Pid) Abortable {
@@ -68,7 +100,7 @@ func (c *Context) Monitor(pid *Pid) Abortable {
 				"machine_id", pid.MachineId)
 
 			m, ok := getMachine(pid.MachineId)
-			if ok {
+			if ok && m.connected {
 				okChan <- true
 
 				m.monitorChan <- remoteMonitorTuple{From: c.self, To: pid}
@@ -82,17 +114,21 @@ func (c *Context) Monitor(pid *Pid) Abortable {
 
 			errorChan <- true
 		} else {
-			pid.monitorChanMu.RLock()
-			defer pid.monitorChanMu.RUnlock()
+			defer func() {
+				if r := recover(); r != nil {
+					//This happens if we write to the monitorChan while the actor is being closed
+					errorChan <- true
+				}
+			}()
 
 			if pid.monitorChan == nil {
 				errorChan <- true
 				return
 			}
 
-			okChan <- true
-
 			pid.monitorChan <- c.self
+
+			okChan <- true
 		}
 	}()
 

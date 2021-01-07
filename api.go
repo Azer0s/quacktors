@@ -9,6 +9,16 @@ import (
 	"sync"
 )
 
+var initCalled = false
+
+func callInitIfNotCalled() {
+	if !initCalled {
+		initQuacktorSystems()
+	}
+
+	initCalled = true
+}
+
 func RegisterType(message Message) {
 	t := reflect.ValueOf(message).Type().Kind()
 
@@ -28,15 +38,20 @@ func RegisterType(message Message) {
 }
 
 var rootContext = Context{
-	self:   &Pid{Id: "root"},
-	Logger: contextLogger{pid: "root"},
+	self:     &Pid{Id: "root"},
+	Logger:   contextLogger{pid: "root"},
+	sendLock: &sync.Mutex{},
 }
 
 func RootContext() Context {
+	callInitIfNotCalled()
+
 	return rootContext
 }
 
 func Spawn(action func(ctx *Context, message Message)) *Pid {
+	callInitIfNotCalled()
+
 	return startActor(&StatelessActor{
 		initFunction:    func(ctx *Context) {},
 		receiveFunction: action,
@@ -44,6 +59,8 @@ func Spawn(action func(ctx *Context, message Message)) *Pid {
 }
 
 func SpawnWithInit(init func(ctx *Context), action func(ctx *Context, message Message)) *Pid {
+	callInitIfNotCalled()
+
 	return startActor(&StatelessActor{
 		initFunction:    init,
 		receiveFunction: action,
@@ -51,16 +68,20 @@ func SpawnWithInit(init func(ctx *Context), action func(ctx *Context, message Me
 }
 
 func SpawnStateful(actor Actor) *Pid {
+	callInitIfNotCalled()
+
 	return startActor(actor)
 }
 
 func NewSystem(name string) (*System, error) {
+	callInitIfNotCalled()
+
 	logger.Info("initializing new system",
 		"system_name", name)
 
 	s := &System{
 		name:              name,
-		handlers:          map[string]*Pid{},
+		handlers:          make(map[string]*Pid),
 		handlersMu:        &sync.RWMutex{},
 		quitChan:          make(chan bool),
 		heartbeatQuitChan: make(chan bool),
@@ -89,6 +110,8 @@ func NewSystem(name string) (*System, error) {
 }
 
 func Connect(name string) (*RemoteSystem, error) {
+	callInitIfNotCalled()
+
 	matched, err := regexp.MatchString("(\\w+)@(.+)", name)
 
 	if !matched || err != nil {

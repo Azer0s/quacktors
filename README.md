@@ -4,7 +4,7 @@
 
 ![Github Action](https://github.com/Azer0s/quacktors/workflows/Go/badge.svg) ![Go Report Card](https://goreportcard.com/badge/github.com/Azer0s/quacktors) [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://github.com/Azer0s/quacktors/blob/master/LICENSE.md)
 
-quacktors or "quick actors" is a Go framework that brings Erlang/Elixir style concurrency to Go! It allows for message passing, actor monitoring and can even deal with remote actors/systems. Furthermore, it comes with plenty of useful standard modules for building actor model systems (like Supervisors, Genservers, etc.). Oh and btw: quacktors is super easy to use!
+quacktors or "quick actors" is a Go framework that brings Erlang/Elixir style concurrency to Go! It allows for message passing, actor monitoring and can even deal with remote actors/systems. Furthermore, it comes with plenty of useful standard modules for building actor model systems (like Supervisors, Relays, etc.). Oh and btw: quacktors is super easy to use!
 
 ```go
 rootCtx := RootContext()
@@ -70,7 +70,7 @@ Wait()
 
 ### Location transparency
 
-Sending messages in quacktors is completely location transparent, meaning no more worrying about connections, marshalling, unmarshalling, error handling and all that other boring stuff. Just send what you want to send to whoever you want to send it to. It's that easy.
+Sending messages in quacktors is completely location transparent, meaning no more worrying about connections, marshalling, unmarshalling, error handling and all that other boring stuff. Just send what you want to whoever you want to send it to. It's that easy.
 
 ### Floating PIDs
 
@@ -116,6 +116,14 @@ rootCtx.Send(ping, *pong)
 
 Wait()
 ```
+
+### On message order and reception
+
+In quacktors, message order is guaranteed from one actor to another. Meaning that if you send messages from A to B, they will arrive in order. The same is true for remote actors.
+
+For multiple actors (A, B & C send messages to D), we can't make that guarantee because we don't know when each actor will execute.
+
+As with basically all other actor systems, there is no guarantee (or even acknowledgement) that a message has been received. `Send` is a non-blocking call and doesn't return anything (even if the sending procedure failed).
 
 ### Configuring quacktors
 

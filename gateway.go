@@ -81,7 +81,7 @@ func handleMessageClient(conn net.Conn) {
 			return
 		}
 
-		msgData := map[string]interface{}{}
+		msgData := make(map[string]interface{})
 
 		err = msgpack.Unmarshal(buf[:n], &msgData)
 		if err != nil {
@@ -209,7 +209,7 @@ func handleGpClient(conn net.Conn) {
 
 	err = sendResponse(conn, qpmd.Response{
 		ResponseType: qpmd.RESPONSE_OK,
-		Data:         map[string]interface{}{},
+		Data:         make(map[string]interface{}),
 	})
 
 	if err != nil {
@@ -231,8 +231,12 @@ func handleGpClient(conn net.Conn) {
 	}
 
 	defer func() {
-		if m.conntected {
-			m.stop()
+		machine, ok := getMachine(m.MachineId)
+
+		if ok {
+			if machine.connected {
+				machine.stop()
+			}
 		}
 	}()
 

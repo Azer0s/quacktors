@@ -8,6 +8,7 @@ import (
 	"github.com/Azer0s/qpmd"
 	"github.com/vmihailenco/msgpack/v5"
 	"net"
+	"sync"
 )
 
 const quitMessageType = "quit"
@@ -23,7 +24,7 @@ const messageVal = "message"
 const machineVal = "machine"
 
 type Machine struct {
-	conntected         bool
+	connected          bool
 	MachineId          string
 	Address            string
 	MessageGatewayPort uint16
@@ -35,22 +36,70 @@ type Machine struct {
 	monitorChan        chan<- remoteMonitorTuple
 	demonitorChan      chan<- remoteMonitorTuple
 	newConnectionChan  chan<- *Machine
-	scheduled          map[string]chan bool
+	//Stores channels to scheduled monitors
+	scheduled map[string]chan bool
+	//Stores channels to tell a monitor task to quit (when a pid is demonitored)
+	monitorQuitChannels map[string]chan bool
+	monitorsMu          *sync.Mutex
 }
 
 func (m *Machine) stop() {
 	go func() {
-		m.conntected = false
+		m.connected = false
 
 		logger.Info("stopping connections to remote machine",
 			"machine_id", m.MachineId)
 
+		deleteMachine(m.MachineId)
+
 		m.gatewayQuitChan <- true
 		m.gpQuitChan <- true
 
-		//TODO: notify monitors
+		close(m.messageChan)
 
-		deleteMachine(m.MachineId)
+		m.monitorsMu.Lock()
+		defer m.monitorsMu.Unlock()
+
+		//Terminate all scheduled events/send down message to monitor tasks
+		logger.Debug("sending out scheduled events after remote machine disconnect",
+			"machine_id", m.MachineId)
+
+		for k, ch := range m.scheduled {
+			ch <- true
+			close(ch)
+			delete(m.scheduled, k)
+		}
+
+		logger.Debug("deleting machine connection monitor abort channels",
+			"machine_id", m.MachineId)
+
+		//Delete monitorQuitChannels
+		for n, c := range m.monitorQuitChannels {
+			close(c)
+			delete(m.monitorQuitChannels, n)
+		}
+		m.monitorQuitChannels = nil
+
+		//TODO: notify actors that monitor remote actors
+	}()
+}
+
+func (m *Machine) setupMonitor(monitor *Pid) {
+	name := monitor.String()
+
+	monitorChannel := make(chan bool)
+	m.scheduled[name] = monitorChannel
+
+	monitorQuitChannel := make(chan bool)
+	m.monitorQuitChannels[name] = monitorQuitChannel
+
+	go func() {
+		select {
+		case <-monitorQuitChannel:
+			return
+		case <-monitorChannel:
+			doSend(monitor, DisconnectMessage{MachineId: m.MachineId, Address: m.Address})
+		}
 	}()
 }
 
@@ -221,6 +270,19 @@ func startGpClient(m *Machine, gpQuitChan <-chan bool, quitChan <-chan *Pid, mon
 }
 
 func (m *Machine) connect() error {
+	//quitChan, monitorChan, demonitorChan and newConnectionChan each have buffers of 100
+	//this is a, sort of, "close protection" for when a remote machine disconnects
+
+	//there is a short time frame (i.e. a couple ns) where the *Machine is closing
+	//but is not yet marked "closed" or deleted from the machine register
+	//in a couple ns, nothing much can happen really (if there are a lot of actors open,
+	//maybe 1 or 2 will manage to send out some commands to the dangling *Machine)
+	//this buffer is there as a precaution to avoid leaking goroutines (because as soon as the
+	//machine is dereferenced, the channels get garbage collected and the machine has to be
+	//dereferenced at some point because it's then only attached to the RemoteSystem instance which
+	//will return an error once used again, forcing the application to reconnect and destroying
+	//the old Machine ptr)
+
 	quitChan := make(chan *Pid, 100)
 	messageChan := make(chan remoteMessageTuple, 2000)
 	monitorChan := make(chan remoteMonitorTuple, 100)
@@ -233,9 +295,13 @@ func (m *Machine) connect() error {
 	m.demonitorChan = demonitorChan
 	m.newConnectionChan = newConnectionChan
 
-	//Buffer size of 1 to avoid leaks if both connections fail
-	gatewayQuitChan := make(chan bool, 1)
-	gpQuitChan := make(chan bool, 1)
+	m.scheduled = make(map[string]chan bool)
+	m.monitorQuitChannels = make(map[string]chan bool)
+	m.monitorsMu = &sync.Mutex{}
+
+	//Buffer size of 2 to avoid leaks if both connections fail
+	gatewayQuitChan := make(chan bool, 2)
+	gpQuitChan := make(chan bool, 2)
 
 	m.gatewayQuitChan = gatewayQuitChan
 	m.gpQuitChan = gpQuitChan
@@ -274,7 +340,7 @@ func (m *Machine) connect() error {
 	logger.Info("successfully established connection to remote machine",
 		"machine_id", m.MachineId)
 
-	m.conntected = true
+	m.connected = true
 
 	return nil
 }

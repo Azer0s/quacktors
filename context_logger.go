@@ -9,7 +9,7 @@ func (c *contextLogger) Trace(message string, context ...interface{}) {
 		logger.Trace(message, context...)
 		return
 	}
-	logger.Trace(message, append(context, []interface{}{"actor_pid", c.pid})...)
+	logger.Trace(message, append([]interface{}{"actor_pid", c.pid}, context...)...)
 }
 
 func (c *contextLogger) Debug(message string, context ...interface{}) {
@@ -17,7 +17,7 @@ func (c *contextLogger) Debug(message string, context ...interface{}) {
 		logger.Debug(message, context...)
 		return
 	}
-	logger.Debug(message, append(context, []interface{}{"actor_pid", c.pid})...)
+	logger.Debug(message, append([]interface{}{"actor_pid", c.pid}, context...)...)
 }
 
 func (c *contextLogger) Info(message string, context ...interface{}) {
@@ -25,7 +25,7 @@ func (c *contextLogger) Info(message string, context ...interface{}) {
 		logger.Info(message, context...)
 		return
 	}
-	logger.Info(message, append(context, []interface{}{"actor_pid", c.pid}...))
+	logger.Info(message, append([]interface{}{"actor_pid", c.pid}, context...)...)
 }
 
 func (c *contextLogger) Warn(message string, context ...interface{}) {
@@ -33,7 +33,7 @@ func (c *contextLogger) Warn(message string, context ...interface{}) {
 		logger.Warn(message, context...)
 		return
 	}
-	logger.Warn(message, append(context, []interface{}{"actor_pid", c.pid}...))
+	logger.Warn(message, append([]interface{}{"actor_pid", c.pid}, context...)...)
 }
 
 func (c *contextLogger) Error(message string, context ...interface{}) {
@@ -41,7 +41,8 @@ func (c *contextLogger) Error(message string, context ...interface{}) {
 		logger.Error(message, context...)
 		return
 	}
-	logger.Error(message, append(context, []interface{}{"actor_pid", c.pid})...)
+
+	logger.Error(message, append([]interface{}{"actor_pid", c.pid}, context...)...)
 }
 
 func (c *contextLogger) Fatal(message string, context ...interface{}) {
@@ -49,5 +50,5 @@ func (c *contextLogger) Fatal(message string, context ...interface{}) {
 		logger.Fatal(message, context...)
 		return
 	}
-	logger.Fatal(message, append(context, []interface{}{"actor_pid", c.pid})...)
+	logger.Fatal(message, append([]interface{}{"actor_pid", c.pid}, context...)...)
 }

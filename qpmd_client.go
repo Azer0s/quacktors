@@ -4,12 +4,9 @@ import (
 	"errors"
 	"fmt"
 	"github.com/Azer0s/qpmd"
-	"github.com/Azer0s/quacktors/config"
 	"net"
 	"time"
 )
-
-var qpmdPort = config.GetQpmdPort()
 
 func qpmdRegister(system *System, systemPort uint16) (net.Conn, error) {
 	logger.Debug("registering system to qpmd",
@@ -60,7 +57,7 @@ func qpmdHeartbeat(conn net.Conn, system *System) {
 			case <-time.After(25 * time.Second):
 				err := sendRequest(conn, qpmd.Request{
 					RequestType: qpmd.HEARTBEAT,
-					Data:        map[string]interface{}{},
+					Data:        make(map[string]interface{}),
 				})
 				if err != nil {
 					quit()

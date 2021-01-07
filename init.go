@@ -11,9 +11,13 @@ import (
 var messageGatewayPort = uint16(0)
 var gpGatewayPort = uint16(0)
 
-var logger = config.GetLogger()
+var logger config.Logger
+var qpmdPort uint16
 
-func init() {
+func initQuacktorSystems() {
+	logger = config.GetLogger()
+	qpmdPort = config.GetQpmdPort()
+
 	initializeGateways()
 	initializeQpmdConnection()
 	initializeBuiltInMessages()
@@ -72,4 +76,5 @@ func initializeBuiltInMessages() {
 	RegisterType(DownMessage{})
 	RegisterType(PoisonPill{})
 	RegisterType(GenericMessage{})
+	RegisterType(DisconnectMessage{})
 }

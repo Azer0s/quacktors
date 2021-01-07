@@ -25,7 +25,7 @@ func (r *RemoteSystem) sayHello() error {
 
 	err = sendRequest(conn, qpmd.Request{
 		RequestType: qpmd.REQUEST_HELLO,
-		Data:        map[string]interface{}{},
+		Data:        make(map[string]interface{}),
 	})
 
 	if err != nil {
@@ -45,6 +45,10 @@ func (r *RemoteSystem) sayHello() error {
 }
 
 func (r *RemoteSystem) Remote(handlerName string) (*Pid, error) {
+	if !r.Machine.connected {
+		return nil, errors.New("remote machine is not connected")
+	}
+
 	conn, err := net.Dial("tcp", fmt.Sprintf("%s:%d", r.Address, r.Port))
 	if err != nil {
 		return nil, err
