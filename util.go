@@ -1,6 +1,7 @@
 package quacktors
 
 import (
+	"encoding/json"
 	"github.com/Azer0s/qpmd"
 	"github.com/gofrs/uuid"
 	"github.com/vmihailenco/msgpack/v5"
@@ -36,6 +37,38 @@ func uuidString() string {
 	}
 
 	return strings.ReplaceAll(u.String(), "-", "")
+}
+
+func parsePid(rawData map[string]interface{}) (*Pid, error) {
+	b, err := json.Marshal(rawData)
+
+	if err != nil {
+		return nil, err
+	}
+
+	pid := &Pid{}
+	err = json.Unmarshal(b, pid)
+
+	if err != nil {
+		return nil, err
+	}
+
+	return pid, nil
+}
+
+func parseMachine(rawData map[string]interface{}) (*Machine, error) {
+	b, err := json.Marshal(rawData)
+	if err != nil {
+		return nil, err
+	}
+
+	m := &Machine{}
+	err = json.Unmarshal(b, m)
+	if err != nil {
+		return nil, err
+	}
+
+	return m, nil
 }
 
 func sendRequest(conn net.Conn, req qpmd.Request) error {
