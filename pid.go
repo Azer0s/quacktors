@@ -34,6 +34,10 @@ func createPid(quitChan chan<- bool, messageChan chan<- Message, monitorChan cha
 	return pid
 }
 
+func (pid *Pid) Is(other *Pid) bool {
+	return pid.Id == other.Id && pid.MachineId == other.MachineId
+}
+
 func (pid *Pid) cleanup() {
 	logger.Debug("cleaning up pid",
 		"pid_id", pid.Id)
