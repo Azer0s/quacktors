@@ -77,4 +77,5 @@ func initializeBuiltInMessages() {
 	RegisterType(PoisonPill{})
 	RegisterType(GenericMessage{})
 	RegisterType(DisconnectMessage{})
+	RegisterType(KillMessage{})
 }

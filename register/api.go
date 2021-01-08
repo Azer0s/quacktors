@@ -8,6 +8,10 @@ import (
 var register = make(map[string]*quacktors.Pid)
 var registerMu = &sync.RWMutex{}
 
+func ModifyUnsafe(action func(register *map[string]*quacktors.Pid, mu *sync.RWMutex)) {
+	action(&register, registerMu)
+}
+
 func SetPid(name string, pid *quacktors.Pid) {
 	registerMu.Lock()
 	defer registerMu.Unlock()

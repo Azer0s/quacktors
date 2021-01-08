@@ -35,6 +35,14 @@ func (e EmptyMessage) Type() string {
 	return "EmptyMessage"
 }
 
+type KillMessage struct {
+	//KillMessage to signal to actor it should go down
+}
+
+func (k KillMessage) Type() string {
+	return "KillMessage"
+}
+
 type DisconnectMessage struct {
 	MachineId string
 	Address   string
