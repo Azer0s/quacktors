@@ -100,6 +100,14 @@ func qpmdLookup(system, remoteAddress string) (*RemoteSystem, error) {
 		return &RemoteSystem{}, err
 	}
 
+	if res.ResponseType != qpmd.RESPONSE_OK {
+		logger.Warn("couldn't find remote system in qpmd",
+			"system_name", system,
+			"remote_address", remoteAddress)
+
+		return nil, errors.New("couldn't find remote system in qpmd")
+	}
+
 	machineData := res.Data[qpmd.MACHINE].(map[string]interface{})
 
 	m := &Machine{

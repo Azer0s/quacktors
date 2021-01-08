@@ -3,7 +3,6 @@ package quacktors
 import (
 	"bytes"
 	"encoding/gob"
-	"encoding/json"
 	"errors"
 	"github.com/Azer0s/qpmd"
 	"github.com/vmihailenco/msgpack/v5"
@@ -118,6 +117,19 @@ func handleMessageClient(conn net.Conn) {
 					"client", c,
 					"pid_id", pidId)
 				return
+			}
+
+			if d, ok := msg.(DownMessage); ok {
+				//if we receive a DownMessage, we can remove the link from the remote connection to the monitor
+
+				m, ok := getMachine(d.Who.MachineId)
+
+				if ok && m.connected {
+					m.removeRemoteMonitor(remoteMonitorTuple{
+						From: toPid,
+						To:   d.Who,
+					})
+				}
 			}
 
 			doSend(toPid, msg)
@@ -240,6 +252,15 @@ func handleGpClient(conn net.Conn) {
 		}
 	}()
 
+	defer func() {
+		remoteMonitorQuitAbortablesMu.RLock()
+		defer remoteMonitorQuitAbortablesMu.RUnlock()
+
+		for _, abortable := range remoteMonitorQuitAbortables {
+			abortable.Abort()
+		}
+	}()
+
 	for {
 		r, err := readRequest(conn)
 
@@ -297,6 +318,7 @@ func handleGpRequest(req qpmd.Request, client string) {
 
 		if !ok {
 			logger.Warn("couldn't find pid id target of remote kill command on local system",
+				"client", client,
 				"pid_id", pidId)
 			return
 		}
@@ -304,18 +326,79 @@ func handleGpRequest(req qpmd.Request, client string) {
 		p.die()
 
 	case monitorMessageType:
-	case demonitorMessageType:
-	case newConnectionMessageType:
-		b, err := json.Marshal(req.Data[machineVal])
+		fromPid, err := parsePid(req.Data[fromVal].(map[string]interface{}))
+
 		if err != nil {
-			logger.Warn("there was an error while trying to decode new connection information from remote machine",
+			logger.Warn("there was an error while trying to decode PID data (monitor) for monitor request from remote machine",
 				"client", client,
 				"error", err)
 			return
 		}
 
-		m := &Machine{}
-		err = json.Unmarshal(b, m)
+		toPid, err := parsePid(req.Data[toVal].(map[string]interface{}))
+
+		if err != nil {
+			logger.Warn("there was an error while trying to decode PID data (monitored PID) for monitor request from remote machine",
+				"client", client,
+				"error", err)
+			return
+		}
+
+		p, ok := getByPidId(toPid.Id)
+
+		if !ok {
+			logger.Warn("couldn't find pid id target of remote monitor request on local system",
+				"client", client,
+				"pid_id", toPid.Id)
+			return
+		}
+
+		remoteCtx := Context{
+			self:     fromPid,
+			sendLock: nil,
+			Logger:   contextLogger{},
+		}
+
+		remoteMonitorQuitAbortablesMu.Lock()
+		defer remoteMonitorQuitAbortablesMu.Unlock()
+
+		//TODO: log remote monitor request
+
+		remoteMonitorQuitAbortables[fromPid.String()+"_"+p.String()] = remoteCtx.Monitor(p)
+
+	case demonitorMessageType:
+		fromPid, err := parsePid(req.Data[fromVal].(map[string]interface{}))
+
+		if err != nil {
+			logger.Warn("there was an error while trying to decode PID data (monitor) for demonitor request from remote machine",
+				"client", client,
+				"error", err)
+			return
+		}
+
+		toPid, err := parsePid(req.Data[toVal].(map[string]interface{}))
+
+		if err != nil {
+			logger.Warn("there was an error while trying to decode PID data (monitored PID) for demonitor request from remote machine",
+				"client", client,
+				"error", err)
+			return
+		}
+
+		remoteMonitorQuitAbortablesMu.Lock()
+		defer remoteMonitorQuitAbortablesMu.Unlock()
+
+		//TODO: log remote demonitor request
+
+		name := fromPid.String() + "_" + toPid.String()
+
+		remoteMonitorQuitAbortables[name].Abort()
+
+		delete(remoteMonitorQuitAbortables, name)
+
+	case newConnectionMessageType:
+		m, err := parseMachine(req.Data[machineVal].(map[string]interface{}))
+
 		if err != nil {
 			logger.Warn("there was an error while trying to decode new connection information from remote machine",
 				"client", client,

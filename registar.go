@@ -4,6 +4,9 @@ import (
 	"sync"
 )
 
+var remoteMonitorQuitAbortables = make(map[string]Abortable)
+var remoteMonitorQuitAbortablesMu = &sync.RWMutex{}
+
 var machineId = uuidString()
 var pidMap = make(map[string]*Pid)
 var pidMapMu = &sync.RWMutex{}

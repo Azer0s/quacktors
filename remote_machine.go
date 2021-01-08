@@ -79,8 +79,6 @@ func (m *Machine) stop() {
 			delete(m.monitorQuitChannels, n)
 		}
 		m.monitorQuitChannels = nil
-
-		//TODO: notify actors that monitor remote actors
 	}()
 }
 
@@ -103,7 +101,41 @@ func (m *Machine) setupMonitor(monitor *Pid) {
 	}()
 }
 
-func startMessageClient(m *Machine, messageChan <-chan remoteMessageTuple, gatewayQuitChan <-chan bool, okChan chan<- bool, errorChan chan<- error) {
+func (m *Machine) setupRemoteMonitor(r remoteMonitorTuple) {
+	m.monitorsMu.Lock()
+	defer m.monitorsMu.Unlock()
+
+	name := r.From.String() + "_" + r.To.String()
+
+	monitorChannel := make(chan bool)
+	m.scheduled[name] = monitorChannel
+
+	monitorQuitChannel := make(chan bool)
+	m.monitorQuitChannels[name] = monitorQuitChannel
+
+	go func() {
+		select {
+		case <-monitorQuitChannel:
+			return
+		case <-monitorChannel:
+			doSend(r.From, DownMessage{Who: r.To})
+		}
+	}()
+}
+
+func (m *Machine) removeRemoteMonitor(r remoteMonitorTuple) {
+	m.monitorsMu.Lock()
+	defer m.monitorsMu.Unlock()
+
+	name := r.From.String() + "_" + r.To.String()
+
+	m.monitorQuitChannels[name] <- true
+
+	delete(m.scheduled, name)
+	delete(m.monitorQuitChannels, name)
+}
+
+func (m *Machine) startMessageClient(messageChan <-chan remoteMessageTuple, gatewayQuitChan <-chan bool, okChan chan<- bool, errorChan chan<- error) {
 	logger.Debug("starting message client for remote machine",
 		"machine_id", m.MachineId)
 
@@ -118,6 +150,16 @@ func startMessageClient(m *Machine, messageChan <-chan remoteMessageTuple, gatew
 	for {
 		select {
 		case message := <-messageChan:
+			if d, ok := message.Message.(DownMessage); ok {
+				logger.Trace("cleaning up old remote monitor abortable, local PID just went down",
+					"monitor_pid", message.To.String(),
+					"monitored_pid", d.Who.String())
+
+				remoteMonitorQuitAbortablesMu.Lock()
+				delete(remoteMonitorQuitAbortables, message.To.String()+"_"+d.Who.String())
+				remoteMonitorQuitAbortablesMu.Unlock()
+			}
+
 			byteBuf := new(bytes.Buffer)
 			enc := gob.NewEncoder(byteBuf)
 
@@ -157,7 +199,7 @@ func startMessageClient(m *Machine, messageChan <-chan remoteMessageTuple, gatew
 	}
 }
 
-func startGpClient(m *Machine, gpQuitChan <-chan bool, quitChan <-chan *Pid, monitorChan <-chan remoteMonitorTuple, demonitorChan <-chan remoteMonitorTuple, newConnectionChan <-chan *Machine, okChan chan<- bool, errorChan chan<- error) {
+func (m *Machine) startGpClient(gpQuitChan <-chan bool, quitChan <-chan *Pid, monitorChan <-chan remoteMonitorTuple, demonitorChan <-chan remoteMonitorTuple, newConnectionChan <-chan *Machine, okChan chan<- bool, errorChan chan<- error) {
 	logger.Debug("starting general purpose client for remote machine",
 		"machine_id", m.MachineId)
 
@@ -211,10 +253,12 @@ func startGpClient(m *Machine, gpQuitChan <-chan bool, quitChan <-chan *Pid, mon
 					"error", err)
 				m.stop()
 			}
+
 		case r := <-monitorChan:
 			//Note: when we monitor a foreign pid, we also have to link up the remote machine
 			//to the actual monitor. I.e. if the connection to the remote machine goes down, we also have to send out
 			//down messages to the monitors
+
 			err := sendRequest(conn, qpmd.Request{
 				RequestType: monitorMessageType,
 				Data: map[string]interface{}{
@@ -230,6 +274,12 @@ func startGpClient(m *Machine, gpQuitChan <-chan bool, quitChan <-chan *Pid, mon
 					"error", err)
 				m.stop()
 			}
+
+			//this is the above mentioned link; if the remote connection goes down, a DownMessage is sent
+			//to the monitoring PID (but obviously from the local machine because the remote one already
+			//disconnected)
+			m.setupRemoteMonitor(r)
+
 		case r := <-demonitorChan:
 			err := sendRequest(conn, qpmd.Request{
 				RequestType: demonitorMessageType,
@@ -238,6 +288,7 @@ func startGpClient(m *Machine, gpQuitChan <-chan bool, quitChan <-chan *Pid, mon
 					toVal:   r.To,
 				},
 			})
+
 			if err != nil {
 				logger.Warn("there was an error while sending demonitor request to remote machine",
 					"monitor", r.From.String(),
@@ -246,6 +297,10 @@ func startGpClient(m *Machine, gpQuitChan <-chan bool, quitChan <-chan *Pid, mon
 					"error", err)
 				m.stop()
 			}
+
+			//remove "link" to the connection
+			m.removeRemoteMonitor(r)
+
 		case machine := <-newConnectionChan:
 			err := sendRequest(conn, qpmd.Request{
 				RequestType: newConnectionMessageType,
@@ -312,7 +367,7 @@ func (m *Machine) connect() error {
 	logger.Info("connecting to remote machine",
 		"machine_id", m.MachineId)
 
-	go startMessageClient(m, messageChan, gatewayQuitChan, okChan, errorChan)
+	go m.startMessageClient(messageChan, gatewayQuitChan, okChan, errorChan)
 
 	select {
 	case err := <-errorChan:
@@ -324,7 +379,7 @@ func (m *Machine) connect() error {
 		//everything went fine
 	}
 
-	go startGpClient(m, gpQuitChan, quitChan, monitorChan, demonitorChan, newConnectionChan, okChan, errorChan)
+	go m.startGpClient(gpQuitChan, quitChan, monitorChan, demonitorChan, newConnectionChan, okChan, errorChan)
 
 	select {
 	case err := <-errorChan:

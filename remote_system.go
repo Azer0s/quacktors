@@ -1,7 +1,6 @@
 package quacktors
 
 import (
-	"encoding/json"
 	"errors"
 	"fmt"
 	"github.com/Azer0s/qpmd"
@@ -71,14 +70,11 @@ func (r *RemoteSystem) Remote(handlerName string) (*Pid, error) {
 		return nil, errors.New("remote system returned non okay result")
 	}
 
-	pidData, err := json.Marshal(res.Data[pidVal])
+	pid, err := parsePid(res.Data[pidVal].(map[string]interface{}))
 
 	if err != nil {
 		return nil, err
 	}
-
-	pid := &Pid{}
-	err = json.Unmarshal(pidData, &pid)
 
 	return pid, nil
 }

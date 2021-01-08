@@ -188,6 +188,8 @@ func TestNewSystemWithHandler(t *testing.T) {
 	s.HandleRemote("printer", p)
 
 	Wait()
+
+	<-time.After(1 * time.Second)
 }
 
 func TestContext_MonitorMachine(t *testing.T) {
@@ -251,6 +253,40 @@ func TestConnectRemoteKill(t *testing.T) {
 	rootCtx.Kill(p)
 
 	<-time.After(50 * time.Millisecond)
+}
+
+func TestConnectRemoteMonitor(t *testing.T) {
+	r, err := Connect("test@localhost")
+
+	if err != nil {
+		t.Fail()
+		return
+	}
+
+	p, err := r.Remote("printer")
+
+	if err != nil {
+		t.Fail()
+		return
+	}
+
+	SpawnWithInit(func(ctx *Context) {
+		ctx.Monitor(p)
+		//a := ctx.Monitor(p)
+		//<-time.After(1 * time.Second)
+		//a.Abort()
+		//<-time.After(1 * time.Second)
+	}, func(ctx *Context, message Message) {
+		fmt.Println(message)
+		ctx.Quit()
+	})
+
+	<-time.After(5 * time.Second)
+
+	rootCtx := RootContext()
+	rootCtx.Kill(p)
+
+	Wait()
 }
 
 func TestConnectPoisonPill(t *testing.T) {
