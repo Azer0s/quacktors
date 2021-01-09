@@ -109,7 +109,14 @@ func startActor(actor Actor) *Pid {
 				ctx.Logger.Debug("executing deferred actor actions")
 
 				for _, action := range ctx.deferred {
-					action()
+					func() {
+						defer func() {
+							if r := recover(); r != nil {
+								//action failed but we want to ignore that
+							}
+						}()
+						action()
+					}()
 				}
 
 				ctx.deferred = make([]func(), 0)
