@@ -41,6 +41,7 @@ var rootContext = Context{
 	self:     &Pid{Id: "root"},
 	Logger:   contextLogger{pid: "root"},
 	sendLock: &sync.Mutex{},
+	deferred: make([]func(), 0),
 }
 
 func RootContext() Context {

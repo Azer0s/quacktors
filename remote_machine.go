@@ -60,24 +60,29 @@ func (m *Machine) stop() {
 		m.monitorsMu.Lock()
 		defer m.monitorsMu.Unlock()
 
-		//Terminate all scheduled events/send down message to monitor tasks
-		logger.Debug("sending out scheduled events after remote machine disconnect",
-			"machine_id", m.MachineId)
+		if len(m.scheduled) != 0 {
+			//Terminate all scheduled events/send down message to monitor tasks
+			logger.Debug("sending out scheduled events after remote machine disconnect",
+				"machine_id", m.MachineId)
 
-		for k, ch := range m.scheduled {
-			ch <- true
-			close(ch)
-			delete(m.scheduled, k)
+			for k, ch := range m.scheduled {
+				ch <- true
+				close(ch)
+				delete(m.scheduled, k)
+			}
 		}
 
-		logger.Debug("deleting machine connection monitor abort channels",
-			"machine_id", m.MachineId)
+		if len(m.monitorQuitChannels) != 0 {
+			logger.Debug("deleting machine connection monitor abort channels",
+				"machine_id", m.MachineId)
 
-		//Delete monitorQuitChannels
-		for n, c := range m.monitorQuitChannels {
-			close(c)
-			delete(m.monitorQuitChannels, n)
+			//Delete monitorQuitChannels
+			for n, c := range m.monitorQuitChannels {
+				close(c)
+				delete(m.monitorQuitChannels, n)
+			}
 		}
+
 		m.monitorQuitChannels = nil
 	}()
 }

@@ -52,6 +52,16 @@ func (s *SupervisorComponent) Init(ctx *quacktors.Context) {
 			s.setupActor(ctx, id, actor)
 		}
 	})
+
+	ctx.Defer(func() {
+		for id, _ := range s.pids {
+			//first abort all monitors
+			s.monitors[id].Abort()
+
+			//then kill all other actors
+			ctx.Kill(s.pids[id])
+		}
+	})
 }
 
 func (s *SupervisorComponent) Run(ctx *quacktors.Context, message quacktors.Message) {
@@ -96,26 +106,23 @@ func (s *SupervisorComponent) Run(ctx *quacktors.Context, message quacktors.Mess
 						//then kill all other actors
 						ctx.Kill(s.pids[id])
 					}
-
-					//then kill supervisor
-					ctx.Send(ctx.Self(), quacktors.PoisonPill{})
 				}
+
+				//set the pids map to empty so that it's not cleared in defer
+				s.pids = make(map[string]*quacktors.Pid)
+
+				//kill supervisor
+				ctx.Send(ctx.Self(), quacktors.PoisonPill{})
 			}
 		}
 
 		if _, ok := message.(quacktors.KillMessage); ok {
 			//"gracefully" shut down supervisor
 
-			for id, _ := range s.pids {
-				//first abort all monitors
-				s.monitors[id].Abort()
+			ctx.Logger.Info("gracefully shutting down supervisor")
 
-				//then kill all other actors
-				ctx.Kill(s.pids[id])
-
-				//then kill supervisor
-				ctx.Send(ctx.Self(), quacktors.PoisonPill{})
-			}
+			//then kill supervisor
+			ctx.Send(ctx.Self(), quacktors.PoisonPill{})
 		}
 	})
 }

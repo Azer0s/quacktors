@@ -357,6 +357,7 @@ func handleGpRequest(req qpmd.Request, client string) {
 			self:     fromPid,
 			sendLock: nil,
 			Logger:   contextLogger{},
+			deferred: make([]func(), 0),
 		}
 
 		remoteMonitorQuitAbortablesMu.Lock()

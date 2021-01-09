@@ -82,6 +82,7 @@ func startActor(actor Actor) *Pid {
 		self:     pid,
 		Logger:   contextLogger{pid: pid.Id},
 		sendLock: &sync.Mutex{},
+		deferred: make([]func(), 0),
 	}
 
 	actor.Init(ctx)
@@ -103,6 +104,17 @@ func startActor(actor Actor) *Pid {
 						"panic", r)
 				}
 			}
+
+			if len(ctx.deferred) != 0 {
+				ctx.Logger.Debug("executing deferred actor actions")
+
+				for _, action := range ctx.deferred {
+					action()
+				}
+
+				ctx.deferred = make([]func(), 0)
+			}
+
 			pid.cleanup()
 		}()
 

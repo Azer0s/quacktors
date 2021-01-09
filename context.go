@@ -9,6 +9,11 @@ type Context struct {
 	self     *Pid
 	sendLock *sync.Mutex
 	Logger   contextLogger
+	deferred []func()
+}
+
+func (c *Context) Defer(action func()) {
+	c.deferred = append(c.deferred, action)
 }
 
 func (c *Context) Self() *Pid {

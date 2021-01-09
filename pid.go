@@ -56,28 +56,33 @@ func (pid *Pid) cleanup() {
 	close(pid.demonitorChan)
 	pid.demonitorChan = nil
 
-	//Terminate all scheduled events/send down message to monitor tasks
-	logger.Debug("sending out scheduled events after pid cleanup",
-		"pid_id", pid.Id)
+	if len(pid.scheduled) != 0 {
+		//Terminate all scheduled events/send down message to monitor tasks
+		logger.Debug("sending out scheduled events after pid cleanup",
+			"pid_id", pid.Id)
 
-	for n, ch := range pid.scheduled {
-		//what if someone aborts the monitor while we attempt to write to it?
-		//this can never happen because all monitor and demonitor requests go
-		//through the actor which is currently being closed
+		for n, ch := range pid.scheduled {
+			//what if someone aborts the monitor while we attempt to write to it?
+			//this can never happen because all monitor and demonitor requests go
+			//through the actor which is currently being closed
 
-		ch <- true //this is blocking
-		close(ch)
-		delete(pid.scheduled, n)
+			ch <- true //this is blocking
+			close(ch)
+			delete(pid.scheduled, n)
+		}
 	}
 
-	logger.Debug("deleting monitor abort channels",
-		"pid_id", pid.Id)
+	if len(pid.monitorQuitChannels) != 0 {
+		logger.Debug("deleting monitor abort channels",
+			"pid_id", pid.Id)
 
-	//Delete monitorQuitChannels
-	for n, c := range pid.monitorQuitChannels {
-		close(c)
-		delete(pid.monitorQuitChannels, n)
+		//Delete monitorQuitChannels
+		for n, c := range pid.monitorQuitChannels {
+			close(c)
+			delete(pid.monitorQuitChannels, n)
+		}
 	}
+
 	pid.monitorQuitChannels = nil
 }
 
