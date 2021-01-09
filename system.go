@@ -11,6 +11,13 @@ import (
 const handler = "handler"
 const pidVal = "pid"
 
+//The System struct represents a logical actor system (i.e. a
+//collection of PIDs that have been assigned a handler
+//name so that remote machines can look them up).
+//Furthermore, the System struct also keeps track of the
+//connection to the local qpmd and keeps track of the
+//system server status (the server which is used to
+//look up PIDs by handler names, etc).
 type System struct {
 	name              string
 	handlers          map[string]*Pid
@@ -20,6 +27,7 @@ type System struct {
 	closed            bool
 }
 
+//HandleRemote associates a PID with a handler name.
 func (s *System) HandleRemote(name string, process *Pid) {
 	s.handlersMu.Lock()
 	defer s.handlersMu.Unlock()
@@ -27,10 +35,14 @@ func (s *System) HandleRemote(name string, process *Pid) {
 	s.handlers[name] = process
 }
 
+//IsClosed returns true if the connection to the
+//local qpmd or the system server were closed.
 func (s *System) IsClosed() bool {
 	return s.closed
 }
 
+//Close closes the connection to the local qpmd
+//and quits the system server.
 func (s *System) Close() {
 	s.closed = true
 	s.quitChan <- true
@@ -150,7 +162,7 @@ func (s *System) handleClient(conn net.Conn) {
 			"client", c,
 			"handler_name", handlerName)
 
-		err = writeError(conn, errors.New(fmt.Sprintf("couldn't find handler %s", handlerName)))
+		err = writeError(conn, fmt.Errorf("couldn't find handler %s", handlerName))
 
 		if err != nil {
 			logger.Warn("there was an error while sending error message to client",

@@ -4,6 +4,11 @@ import (
 	"fmt"
 )
 
+//The Pid struct acts as a reference to another actor.
+//It is completely location transparent, meaning it doesn't
+//matter if the Pid is actually on another system. To the
+//developer it will look like just another actor they can
+//send messages to.
 type Pid struct {
 	MachineId     string
 	Id            string
@@ -34,6 +39,7 @@ func createPid(quitChan chan<- bool, messageChan chan<- Message, monitorChan cha
 	return pid
 }
 
+//Is compares two PIDs and returns true if their ID and MachineId are the same.
 func (pid *Pid) Is(other *Pid) bool {
 	return pid.Id == other.Id && pid.MachineId == other.MachineId
 }
@@ -128,6 +134,10 @@ func (pid *Pid) String() string {
 	return fmt.Sprintf("%s@%s", pid.Id, pid.MachineId)
 }
 
+//Type returns the Message type of the PID.
+//Since PIDs can be sent around without any message wrapper,
+//it needs to implement the Message interface (which is why
+//Type is needed).
 func (pid Pid) Type() string {
 	return "pid"
 }

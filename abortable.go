@@ -88,10 +88,16 @@ func (ma *MachineConnectionMonitorAbortable) Abort() {
 }
 
 type SendAfterAbortable struct {
+	quitChan chan bool
 }
 
 func (sa *SendAfterAbortable) Abort() {
+	defer func() {
+		//this can happen if the channel is already closed
+		recover()
+	}()
 
+	sa.quitChan <- true
 }
 
 type NoopAbortable struct {

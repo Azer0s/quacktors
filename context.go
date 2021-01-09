@@ -3,6 +3,7 @@ package quacktors
 import (
 	"reflect"
 	"sync"
+	"time"
 )
 
 type Context struct {
@@ -31,6 +32,24 @@ func (c *Context) Send(to *Pid, message Message) {
 	defer c.sendLock.Unlock()
 
 	doSend(to, message)
+}
+
+func (c *Context) SendAfter(to *Pid, message Message, duration time.Duration) Abortable {
+	quitChan := make(chan bool)
+
+	go func() {
+		defer close(quitChan)
+
+		select {
+		case <-time.After(duration):
+			c.Send(to, message)
+			return
+		case <-quitChan:
+			return
+		}
+	}()
+
+	return &SendAfterAbortable{quitChan: quitChan}
 }
 
 func (c *Context) Kill(pid *Pid) {

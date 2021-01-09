@@ -330,3 +330,20 @@ func TestActorSpawn(t *testing.T) {
 
 	SpawnStateful(actor)
 }
+
+func TestContext_SendAfter(t *testing.T) {
+	rootContext := RootContext()
+
+	p := Spawn(func(ctx *Context, message Message) {
+		t.Fail()
+	})
+
+	a := rootContext.SendAfter(p, GenericMessage{}, 1*time.Second)
+	a.Abort()
+
+	<-time.After(3 * time.Second)
+
+	rootContext.Kill(p)
+
+	Wait()
+}

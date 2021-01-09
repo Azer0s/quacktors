@@ -9,6 +9,9 @@ import (
 
 //TODO: log
 
+//RemoteSystem is the struct representation of a system
+//(i.e. a collection of PIDs that have been assigned a name)
+//on a remote machine.
 type RemoteSystem struct {
 	MachineId string
 	Address   string
@@ -43,6 +46,7 @@ func (r *RemoteSystem) sayHello() error {
 	return nil
 }
 
+//Remote gets a remote PID by its handler name.
 func (r *RemoteSystem) Remote(handlerName string) (*Pid, error) {
 	if !r.Machine.connected {
 		return nil, errors.New("remote machine is not connected")

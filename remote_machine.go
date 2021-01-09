@@ -23,6 +23,7 @@ const messageVal = "message"
 
 const machineVal = "machine"
 
+//Machine is the struct representation of a remote machine.
 type Machine struct {
 	connected          bool
 	MachineId          string

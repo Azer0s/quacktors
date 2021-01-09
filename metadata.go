@@ -66,10 +66,12 @@ func deleteMachine(machineId string) {
 	delete(machines, machineId)
 }
 
+//Wait waits until all actors have quit.
 func Wait() {
 	systemWg.Wait()
 }
 
+//MachineId returns the local machine id.
 func MachineId() string {
 	return machineId
 }
