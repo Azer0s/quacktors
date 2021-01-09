@@ -68,6 +68,19 @@ SpawnWithInit(func(ctx *Context) {
 Wait()
 ```
 
+### Supervision
+
+quacktors comes with some cool standard components, one of which is the supervisor. The supervisor (as the name implies) supervises one or many named actors and reacts to failures according to a set strategy.
+
+```go
+SpawnStateful(component.Supervisor(component.ALL_FOR_ONE_STRATEGY, map[string]Actor{
+    "1": &superImportantActor{id: 1},
+    "2": &superImportantActor{id: 2},
+    "3": &superImportantActor{id: 3},
+    "4": &superImportantActor{id: 4},
+}))
+```
+
 ### Location transparency
 
 Sending messages in quacktors is completely location transparent, meaning no more worrying about connections, marshalling, unmarshalling, error handling and all that other boring stuff. Just send what you want to whoever you want to send it to. It's that easy.
