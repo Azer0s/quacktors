@@ -54,7 +54,7 @@ func (s *SupervisorComponent) Init(ctx *quacktors.Context) {
 	})
 
 	ctx.Defer(func() {
-		for id, _ := range s.pids {
+		for id := range s.pids {
 			//first abort all monitors
 			s.monitors[id].Abort()
 

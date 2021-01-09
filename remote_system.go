@@ -60,6 +60,10 @@ func (r *RemoteSystem) Remote(handlerName string) (*Pid, error) {
 		},
 	})
 
+	if err != nil {
+		return nil, err
+	}
+
 	res, err := readResponse(conn)
 
 	if err != nil {
