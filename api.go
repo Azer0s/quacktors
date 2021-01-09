@@ -19,6 +19,9 @@ func callInitIfNotCalled() {
 	initCalled = true
 }
 
+//RegisterType registers a Message to the type store so it can
+//be sent to remote machines (which, of course, need a Message
+//with the same Message.Type registered).
 func RegisterType(message Message) {
 	t := reflect.ValueOf(message).Type().Kind()
 
@@ -44,36 +47,49 @@ var rootContext = Context{
 	deferred: make([]func(), 0),
 }
 
+//RootContext returns a context that can be used outside an Actor.
+//It is not associated with a real PID and therefore, one should
+//not call anything with the RootContext that requires it to be
+//able to receive or the like (e.g. no Context.Quit, Context.Monitor, etc.).
 func RootContext() Context {
 	callInitIfNotCalled()
 
 	return rootContext
 }
 
+//Spawn spawns an Actor from an anonymous receive function and
+//returns the *Pid of the Actor.
 func Spawn(action func(ctx *Context, message Message)) *Pid {
 	callInitIfNotCalled()
 
 	return startActor(&StatelessActor{
-		initFunction:    func(ctx *Context) {},
-		receiveFunction: action,
+		InitFunction:    func(ctx *Context) {},
+		ReceiveFunction: action,
 	})
 }
 
+//SpawnWithInit spawns an Actor from an anonymous receive function
+//and an anonymous init function and returns the *Pid of the Actor.
 func SpawnWithInit(init func(ctx *Context), action func(ctx *Context, message Message)) *Pid {
 	callInitIfNotCalled()
 
 	return startActor(&StatelessActor{
-		initFunction:    init,
-		receiveFunction: action,
+		InitFunction:    init,
+		ReceiveFunction: action,
 	})
 }
 
+//SpawnStateful spawns an Actor.
 func SpawnStateful(actor Actor) *Pid {
 	callInitIfNotCalled()
 
 	return startActor(actor)
 }
 
+//NewSystem creates a new system server, connects to
+//qpmd, starts the qpmd heartbeat for the new system and
+//returns a *System and an error (nil if everything
+//went fine).
 func NewSystem(name string) (*System, error) {
 	callInitIfNotCalled()
 
@@ -110,6 +126,12 @@ func NewSystem(name string) (*System, error) {
 	return s, nil
 }
 
+//Connect connects to a remote system and returns a
+//*RemoteSystem and an error (nil if everything went
+//fine). The connection string format should be
+//"system@remote" where "system" is the name of the
+//remote system and "remote" is either an IP or a
+//domain name.
 func Connect(name string) (*RemoteSystem, error) {
 	callInitIfNotCalled()
 

@@ -1,13 +1,15 @@
 package config
 
+import "github.com/Azer0s/quacktors/logging"
+
 //SetLogger sets the Logger implementation used by quacktors.
 //(LogrusLogger by default)
-func SetLogger(l Logger) {
+func SetLogger(l logging.Logger) {
 	logger = l
 }
 
 //GetLogger gets the configured Logger implementation.
-func GetLogger() Logger {
+func GetLogger() logging.Logger {
 	return logger
 }
 

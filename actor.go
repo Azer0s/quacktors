@@ -2,22 +2,54 @@ package quacktors
 
 import "sync"
 
+//The Actor interface defines the methods a struct has to implement
+//so it can be spawned by quacktors.
 type Actor interface {
+	//Init is called when an Actor is initialized. It is
+	//guaranteed to be called before an Actor has been registered
+	//or even started. Typically, Init is used to start monitors
+	//to other actors or do some setup work. The caller
+	//function provides a Context to the Init function.
+	//Context can be used to interact with other actors
+	//(e.g. send, monitor, etc) or modify the current Actor
+	//(e.g. quit, defer actions, etc).
 	Init(ctx *Context)
+
+	//Run is called when an Actor receives a Message. The caller
+	//function provides both a Context as well as the actual
+	//Message to the Run function. Context can then be used to
+	//interact with other actors (e.g. send, monitor, etc) or
+	//modify the current Actor (e.g. quit, defer actions, etc).
 	Run(ctx *Context, message Message)
 }
 
+//The StatelessActor struct is the Actor implementation that is
+//used when using Spawn or SpawnWithInit. As the name implies,
+//the StatelessActor doesn't have a state and just requires one
+//anonymous function as the initializer (for Init) and another one
+//as the run function (for Run) to work.
+//ReceiveFunction can be nil, InitFunction has to be set.
 type StatelessActor struct {
-	initFunction    func(ctx *Context)
-	receiveFunction func(ctx *Context, message Message)
+	InitFunction    func(ctx *Context)
+	ReceiveFunction func(ctx *Context, message Message)
 }
 
+//Init initializes the StatelessActor by calling InitFunction if it
+//is not nil. Init panics if ReceiveFunction is not set.
 func (s *StatelessActor) Init(ctx *Context) {
-	s.initFunction(ctx)
+	if s.InitFunction != nil {
+		s.InitFunction(ctx)
+	}
+
+	if s.ReceiveFunction == nil {
+		panic("ReceiveFunction of a StatelessActor cannot be nil")
+	}
 }
 
+//Run forwards both the Message and the Context to the ReceiveFunction
+//when the StatelessActor receives a message.
 func (s *StatelessActor) Run(ctx *Context, message Message) {
-	s.receiveFunction(ctx, message)
+	s.ReceiveFunction(ctx, message)
 }
 
 func doSend(to *Pid, message Message) {

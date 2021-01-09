@@ -8,16 +8,27 @@ import (
 
 //TODO: logging
 
-type Strategy int
+type strategy int
 
+//goland:noinspection GoSnakeCaseUsage
 const (
-	ONE_FOR_ONE_STRATEGY Strategy = iota
+	//The ONE_FOR_ONE_STRATEGY indicates that a Supervisor should only
+	//restart the quacktors.Actor that went down when a quacktors.Actor
+	//has quit or was killed.
+	ONE_FOR_ONE_STRATEGY strategy = iota
+
+	//The ALL_FOR_ONE_STRATEGY indicates that a Supervisor should
+	//restart all of its actors when a quacktors.Actor has quit or was killed.
 	ALL_FOR_ONE_STRATEGY
+
+	//The FAIL_ALL_STRATEGY indicates that a Supervisor should kill all other
+	//actors and then itself when a quacktors.Actor has quit or was killed.
 	FAIL_ALL_STRATEGY
 )
 
-func Supervisor(strategy Strategy, actors map[string]quacktors.Actor) *SupervisorComponent {
-	return &SupervisorComponent{
+//Supervisor returns a quacktors.Actor that supervises other actors by some strategy.
+func Supervisor(strategy strategy, actors map[string]quacktors.Actor) *supervisorComponent {
+	return &supervisorComponent{
 		strategy: strategy,
 		actors:   actors,
 		pids:     make(map[string]*quacktors.Pid),
@@ -25,14 +36,14 @@ func Supervisor(strategy Strategy, actors map[string]quacktors.Actor) *Superviso
 	}
 }
 
-type SupervisorComponent struct {
-	strategy Strategy
+type supervisorComponent struct {
+	strategy strategy
 	actors   map[string]quacktors.Actor
 	pids     map[string]*quacktors.Pid
 	monitors map[string]quacktors.Abortable
 }
 
-func (s *SupervisorComponent) setupActor(ctx *quacktors.Context, id string, actor quacktors.Actor) {
+func (s *supervisorComponent) setupActor(ctx *quacktors.Context, id string, actor quacktors.Actor) {
 	register.ModifyUnsafe(func(register *map[string]*quacktors.Pid, mu *sync.RWMutex) {
 		p := quacktors.SpawnStateful(actor)
 		s.pids[id] = p
@@ -43,7 +54,7 @@ func (s *SupervisorComponent) setupActor(ctx *quacktors.Context, id string, acto
 	})
 }
 
-func (s *SupervisorComponent) Init(ctx *quacktors.Context) {
+func (s *supervisorComponent) Init(ctx *quacktors.Context) {
 	register.ModifyUnsafe(func(register *map[string]*quacktors.Pid, mu *sync.RWMutex) {
 		mu.Lock()
 		defer mu.Unlock()
@@ -64,7 +75,7 @@ func (s *SupervisorComponent) Init(ctx *quacktors.Context) {
 	})
 }
 
-func (s *SupervisorComponent) Run(ctx *quacktors.Context, message quacktors.Message) {
+func (s *supervisorComponent) Run(ctx *quacktors.Context, message quacktors.Message) {
 	register.ModifyUnsafe(func(register *map[string]*quacktors.Pid, mu *sync.RWMutex) {
 		//lock here so that the chance of someone getting a dead pid is minimized
 

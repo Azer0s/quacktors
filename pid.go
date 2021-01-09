@@ -4,10 +4,10 @@ import (
 	"fmt"
 )
 
-//The Pid struct acts as a reference to another actor.
+//The Pid struct acts as a reference to an Actor.
 //It is completely location transparent, meaning it doesn't
 //matter if the Pid is actually on another system. To the
-//developer it will look like just another actor they can
+//developer it will look like just another Actor they can
 //send messages to.
 type Pid struct {
 	MachineId     string

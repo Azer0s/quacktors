@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"github.com/Azer0s/qpmd"
 	"github.com/Azer0s/quacktors/config"
+	"github.com/Azer0s/quacktors/logging"
 	"github.com/vmihailenco/msgpack/v5"
 	"net"
 )
@@ -11,7 +12,7 @@ import (
 var messageGatewayPort = uint16(0)
 var gpGatewayPort = uint16(0)
 
-var logger config.Logger
+var logger logging.Logger
 var qpmdPort uint16
 
 func initQuacktorSystems() {

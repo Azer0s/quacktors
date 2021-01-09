@@ -49,7 +49,7 @@ func (c *Context) SendAfter(to *Pid, message Message, duration time.Duration) Ab
 		}
 	}()
 
-	return &SendAfterAbortable{quitChan: quitChan}
+	return &sendAfterAbortable{quitChan: quitChan}
 }
 
 func (c *Context) Kill(pid *Pid) {
@@ -97,12 +97,12 @@ func (c *Context) MonitorMachine(machine *Machine) Abortable {
 			"monitor_pid", c.self.String())
 
 		doSend(c.self, DisconnectMessage{MachineId: machine.MachineId, Address: machine.Address})
-		return &NoopAbortable{}
+		return &noopAbortable{}
 	}
 
 	machine.setupMonitor(c.self)
 
-	return &MachineConnectionMonitorAbortable{
+	return &machineConnectionMonitorAbortable{
 		machine: machine,
 		monitor: c.self,
 	}
@@ -158,7 +158,7 @@ func (c *Context) Monitor(pid *Pid) Abortable {
 
 	select {
 	case <-okChan:
-		return &MonitorAbortable{
+		return &monitorAbortable{
 			pid:  pid,
 			self: c.self,
 		}
@@ -171,6 +171,6 @@ func (c *Context) Monitor(pid *Pid) Abortable {
 			"monitor_pid", c.self.String())
 
 		doSend(c.self, DownMessage{Who: pid})
-		return &NoopAbortable{}
+		return &noopAbortable{}
 	}
 }

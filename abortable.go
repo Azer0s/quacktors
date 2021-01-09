@@ -1,15 +1,21 @@
 package quacktors
 
+//The Abortable interface defines the methods a struct has
+//to implement so it can be returned by an action that can be canceled.
+//It is very similar to context.Context with the key difference that
+//an Abortable can only Abort and doesn't carry any further
+//details about the underlying action.
 type Abortable interface {
+	//The Abort function aborts the underlying task (e.g. a Monitor) when called.
 	Abort()
 }
 
-type MonitorAbortable struct {
+type monitorAbortable struct {
 	pid  *Pid
 	self *Pid
 }
 
-func (ma *MonitorAbortable) Abort() {
+func (ma *monitorAbortable) Abort() {
 	logger.Debug("demonitoring pid",
 		"monitored_pid", ma.pid.String(),
 		"monitor_pid", ma.self.String())
@@ -56,12 +62,12 @@ func (ma *MonitorAbortable) Abort() {
 	}()
 }
 
-type MachineConnectionMonitorAbortable struct {
+type machineConnectionMonitorAbortable struct {
 	machine *Machine
 	monitor *Pid
 }
 
-func (ma *MachineConnectionMonitorAbortable) Abort() {
+func (ma *machineConnectionMonitorAbortable) Abort() {
 	logger.Debug("demonitoring machine connection",
 		"machine_id", ma.machine.MachineId,
 		"monitor_pid", ma.monitor.String())
@@ -87,11 +93,11 @@ func (ma *MachineConnectionMonitorAbortable) Abort() {
 	}()
 }
 
-type SendAfterAbortable struct {
+type sendAfterAbortable struct {
 	quitChan chan bool
 }
 
-func (sa *SendAfterAbortable) Abort() {
+func (sa *sendAfterAbortable) Abort() {
 	defer func() {
 		//this can happen if the channel is already closed
 		recover()
@@ -100,9 +106,9 @@ func (sa *SendAfterAbortable) Abort() {
 	sa.quitChan <- true
 }
 
-type NoopAbortable struct {
+type noopAbortable struct {
 }
 
-func (na *NoopAbortable) Abort() {
+func (na *noopAbortable) Abort() {
 
 }
