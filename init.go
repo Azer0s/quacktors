@@ -1,6 +1,7 @@
 package quacktors
 
 import (
+	"encoding/gob"
 	"fmt"
 	"github.com/Azer0s/qpmd"
 	"github.com/Azer0s/quacktors/config"
@@ -73,10 +74,10 @@ func initializeQpmdConnection() {
 }
 
 func initializeBuiltInMessages() {
-	RegisterType(Pid{})
-	RegisterType(DownMessage{})
-	RegisterType(PoisonPill{})
-	RegisterType(GenericMessage{})
-	RegisterType(DisconnectMessage{})
-	RegisterType(KillMessage{})
+	gob.RegisterName(Pid{}.Type(), Pid{})
+	gob.RegisterName(DownMessage{}.Type(), DownMessage{})
+	gob.RegisterName(PoisonPill{}.Type(), PoisonPill{})
+	gob.RegisterName(GenericMessage{}.Type(), GenericMessage{})
+	gob.RegisterName(DisconnectMessage{}.Type(), DisconnectMessage{})
+	gob.RegisterName(KillMessage{}.Type(), KillMessage{})
 }

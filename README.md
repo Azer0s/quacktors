@@ -130,6 +130,34 @@ rootCtx.Send(ping, *pong)
 Wait()
 ```
 
+### GenServers
+
+quacktors supports Elixir style GenServers! And it even gets better: quacktors can even filter GenServer functions by operation and message type by parsing the methods name via reflection.
+
+```go
+type PrintRequest struct {
+    //our printing request message
+}
+
+func (p PrintRequest) Type() string {
+    return "PrintRequest"
+}
+
+type Printer struct { 
+    //printing magic
+}
+
+func (p Printer) HandlePrintRequestCall(ctx *Context, message PrintRequest) Message {
+    //print stuff
+	
+    return EmptyMessage{}
+}
+
+
+pid := Spawn(genserver.New(Printer{}))
+res, err := genserver.Call(pid, PrintRequest{})
+```
+
 ### On message order and reception
 
 In quacktors, message order is guaranteed from one actor to another. Meaning that if you send messages from A to B, they will arrive in order. The same is true for remote actors.
