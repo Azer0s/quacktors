@@ -26,26 +26,29 @@ import (
 //Casts are great when you only care about the actor receiving
 //a message but not if the operation was successful.
 //
-//The third and final way is a normal send. This is completely
-//asynchronous and acts like any other actor would (just that
-//a GenServer offers some more framework sugar to make it easier
-//to work with).
+//The third and final way is a normal send (the handlers for which
+//are postfixed with "Info"). This is completely asynchronous and
+//acts like any other actor would (just that a GenServer offers
+//some more framework sugar to make it easier to work with).
 //
 //Usage
 //
 //The handlers links for a custom GenServer are described via
 //the method names. The general format of a GenServer handler
 //is:
-//  Handle + MessageType + (Call | Cast |or nothing for a send handler)
+//  Handle + MessageType + (Call | Cast | Info)
 //So to handle a GenericMessage Cast, the method name would look
 //like so:
 //  func (m myGenServer) HandleGenericMessageCast(ctx *Context, message GenericMessage)
+//
 //And a handler for a KillMessage Call would look like this:
 //  func (m myGenServer) HandleKillMessageCall(ctx *Context, message KillMessage) Message
+//
 //A default handler for a DownMessage would look like this:
-//  func (m myGenServer) HandleDownMessage(ctx *Context, message DownMessage)
+//  func (m myGenServer) HandleDownMessageInfo(ctx *Context, message DownMessage)
+//
 //Note that the Call method returns a message, while the normal
-//send handler and the Cast handler don't. This is because
+//send handler (Info) and the Cast handler don't. This is because
 //a Call is the only GenServer operation that can directly return
 //something to the sender.
 //
@@ -54,8 +57,6 @@ import (
 //  func (m myGenServer) HandleCast(ctx *Context, message GenericMessage)
 //  func (m myGenServer) HandleCall(ctx *Context, message GenericMessage) Message
 //  func (m myGenServer) HandleInfo(ctx *Context, message GenericMessage)
-//(HandleInfo is a innuendo to the Elixir GenServer and is
-//the "catch-all" for normal sends)
 type GenServer interface {
 	InitGenServer(ctx *quacktors.Context)
 }

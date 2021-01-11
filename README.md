@@ -132,7 +132,7 @@ Wait()
 
 ### GenServers
 
-quacktors supports Elixir style GenServers! And it even gets better: quacktors can even filter GenServer functions by operation and message type by parsing the methods name via reflection.
+As part of the default component set, quacktors supports Elixir style GenServers. The handlers for these are configured via the method names via reflection. So a GenServer with a `Call` handler for a `PrintRequest` would look like so:
 
 ```go
 type PrintRequest struct {
@@ -157,6 +157,8 @@ func (p Printer) HandlePrintRequestCall(ctx *Context, message PrintRequest) Mess
 pid := Spawn(genserver.New(Printer{}))
 res, err := genserver.Call(pid, PrintRequest{})
 ```
+
+So you don't even have to write your own actors if you don't want to. Cool, isn't it?
 
 ### On message order and reception
 
