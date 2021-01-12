@@ -27,7 +27,7 @@ const (
 )
 
 //Supervisor returns a quacktors.Actor that supervises other actors by some strategy.
-func Supervisor(strategy strategy, actors map[string]quacktors.Actor) *supervisorComponent {
+func Supervisor(strategy strategy, actors map[string]quacktors.Actor) quacktors.Actor {
 	return &supervisorComponent{
 		strategy: strategy,
 		actors:   actors,

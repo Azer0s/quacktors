@@ -33,7 +33,7 @@ func checkCallHandler(mType reflect.Type) {
 	}
 }
 
-func setHandlerMethod(regex *regexp.Regexp, handlers *map[string]reflect.Value, mType reflect.Type, m reflect.Method)  {
+func setHandlerMethod(regex *regexp.Regexp, handlers *map[string]reflect.Value, mType reflect.Type, m reflect.Method) {
 	handlerMessageName := mType.In(2).Name()
 	messageType := regex.FindStringSubmatch(m.Name)[1]
 

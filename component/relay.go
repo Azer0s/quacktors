@@ -7,7 +7,7 @@ import (
 
 //Relay returns a quacktors.Actor that forwards messages
 //to a named actor.
-func Relay(pidName string) *relayComponent {
+func Relay(pidName string) quacktors.Actor {
 	return &relayComponent{
 		pidName: pidName,
 	}

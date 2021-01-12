@@ -5,6 +5,7 @@ import (
 	"github.com/Azer0s/quacktors"
 	"github.com/Azer0s/quacktors/register"
 	"github.com/stretchr/testify/assert"
+	"sync"
 	"testing"
 	"time"
 )
@@ -150,5 +151,35 @@ func TestSupervisorFailAll(t *testing.T) {
 
 	rootCtx.Send(p, quacktors.GenericMessage{})
 
+	quacktors.Wait()
+}
+
+func TestLink(t *testing.T) {
+	wg := &sync.WaitGroup{}
+
+	p1 := quacktors.SpawnWithInit(func(ctx *quacktors.Context) {
+		wg.Add(1)
+		ctx.Defer(func() {
+			wg.Done()
+		})
+	}, func(ctx *quacktors.Context, message quacktors.Message) {
+
+	})
+
+	p2 := quacktors.SpawnWithInit(func(ctx *quacktors.Context) {
+		wg.Add(1)
+		ctx.Defer(func() {
+			wg.Done()
+		})
+	}, func(ctx *quacktors.Context, message quacktors.Message) {
+
+	})
+
+	quacktors.SpawnStateful(Link(p1, p2))
+
+	context := quacktors.RootContext()
+	context.Kill(p1)
+
+	wg.Wait()
 	quacktors.Wait()
 }
