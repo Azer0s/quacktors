@@ -11,6 +11,39 @@ var handleInfo = regexp.MustCompile("^Handle(.+)$")
 var handleCast = regexp.MustCompile("^Handle(.+)Cast$")
 var handleCall = regexp.MustCompile("^Handle(.+)Call$")
 
+func checkHandlerTypes(mType reflect.Type) {
+	if mType.NumIn() != 3 {
+		panic("a GenServer handler has to have 2 parameters")
+	}
+
+	path := mType.In(1).Elem().String()
+
+	if path != reflect.TypeOf(quacktors.Context{}).String() {
+		panic("the first parameter of a GenServer handler has to be a *quacktors.Context")
+	}
+}
+
+func checkCallHandler(mType reflect.Type) {
+	if mType.NumOut() != 1 {
+		panic("a GenServer call handler has to have one return value")
+	}
+
+	if mType.Out(0).String() != "quacktors.Message" {
+		panic("a GenServer call handler must return a quacktors.Message")
+	}
+}
+
+func setHandlerMethod(regex *regexp.Regexp, handlers *map[string]reflect.Value, mType reflect.Type, m reflect.Method)  {
+	handlerMessageName := mType.In(2).Name()
+	messageType := regex.FindStringSubmatch(m.Name)[1]
+
+	if handlerMessageName != messageType {
+		panic("")
+	}
+
+	(*handlers)[messageType] = m.Func
+}
+
 //New creates a new GenServer. See the GenServer documentation
 //for how to create a custom GenServer.
 func New(server GenServer) quacktors.Actor {
@@ -24,39 +57,49 @@ func New(server GenServer) quacktors.Actor {
 	var defaultInfoHandler reflect.Value
 	defaultInfoHandlerMethod, defaultInfoHandlerSet := t.MethodByName("HandleInfo")
 	if defaultInfoHandlerSet {
+		checkHandlerTypes(defaultInfoHandlerMethod.Func.Type())
 		defaultInfoHandler = defaultInfoHandlerMethod.Func
 	}
 
 	var defaultCastHandler reflect.Value
 	defaultCastHandlerMethod, defaultCastHandlerSet := t.MethodByName("HandleCast")
 	if defaultCastHandlerSet {
+		checkHandlerTypes(defaultCastHandlerMethod.Func.Type())
 		defaultCastHandler = defaultCastHandlerMethod.Func
 	}
 
 	var defaultCallHandler reflect.Value
 	defaultCallHandlerMethod, defaultCallHandlerSet := t.MethodByName("HandleCall")
 	if defaultCallHandlerSet {
+		t := defaultCallHandlerMethod.Func.Type()
+
+		checkHandlerTypes(t)
+		checkCallHandler(t)
+
 		defaultCallHandler = defaultCallHandlerMethod.Func
 	}
 
 	for i := 0; i < methods; i++ {
 		m := t.Method(i)
+		mType := m.Func.Type()
 
 		if handleCall.MatchString(m.Name) {
-			messageType := handleCall.FindStringSubmatch(m.Name)[1]
-			callHandlers[messageType] = m.Func
+			checkHandlerTypes(mType)
+			checkCallHandler(mType)
+
+			setHandlerMethod(handleCall, &callHandlers, mType, m)
 			continue
 		}
 
 		if handleCast.MatchString(m.Name) {
-			messageType := handleCast.FindStringSubmatch(m.Name)[1]
-			castHandlers[messageType] = m.Func
+			checkHandlerTypes(mType)
+			setHandlerMethod(handleCast, &castHandlers, mType, m)
 			continue
 		}
 
 		if handleInfo.MatchString(m.Name) {
-			messageType := handleInfo.FindStringSubmatch(m.Name)[1]
-			infoHandlers[messageType] = m.Func
+			checkHandlerTypes(mType)
+			setHandlerMethod(handleInfo, &infoHandlers, mType, m)
 			continue
 		}
 	}

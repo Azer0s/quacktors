@@ -54,9 +54,9 @@ import (
 //
 //You can optionally define "catch-all" handlers by leaving out
 //the message type:
-//  func (m myGenServer) HandleCast(ctx *Context, message GenericMessage)
-//  func (m myGenServer) HandleCall(ctx *Context, message GenericMessage) Message
-//  func (m myGenServer) HandleInfo(ctx *Context, message GenericMessage)
+//  func (m myGenServer) HandleCast(ctx *Context, message Message)
+//  func (m myGenServer) HandleCall(ctx *Context, message Message) Message
+//  func (m myGenServer) HandleInfo(ctx *Context, message Message)
 type GenServer interface {
 	InitGenServer(ctx *quacktors.Context)
 }
