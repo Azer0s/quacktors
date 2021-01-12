@@ -137,23 +137,25 @@ func (c *Context) Monitor(pid *Pid) Abortable {
 				"machine_id", pid.MachineId)
 
 			errorChan <- true
-		} else {
-			defer func() {
-				if r := recover(); r != nil {
-					//This happens if we write to the monitorChan while the actor is being closed
-					errorChan <- true
-				}
-			}()
 
-			if pid.monitorChan == nil {
-				errorChan <- true
-				return
-			}
-
-			pid.monitorChan <- c.self
-
-			okChan <- true
+			return
 		}
+
+		defer func() {
+			if r := recover(); r != nil {
+				//This happens if we write to the monitorChan while the actor is being closed
+				errorChan <- true
+			}
+		}()
+
+		if pid.monitorChan == nil {
+			errorChan <- true
+			return
+		}
+
+		pid.monitorChan <- c.self
+
+		okChan <- true
 	}()
 
 	select {

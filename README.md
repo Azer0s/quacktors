@@ -20,6 +20,9 @@ rootCtx.Send(pid, EmptyMessage{})
 
 ### Getting started
 
+To get started, you'll need an installation of qpmd (see: [qpmd](https://github.com/Azer0s/qpmd)).
+The quacktor port mapper daemon is responsible for keeping track of all running systems and quacktor instances on your local machine and acts as a "DNS server" for remote machines that want to connect to a local system.
+
 ```go
 import . "github.com/Azer0s/quacktors"
 
