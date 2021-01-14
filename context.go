@@ -1,16 +1,34 @@
 package quacktors
 
 import (
+	"github.com/opentracing/opentracing-go"
 	"reflect"
 	"sync"
 	"time"
 )
 
 type Context struct {
-	self     *Pid
-	sendLock *sync.Mutex
-	Logger   contextLogger
-	deferred []func()
+	span      opentracing.Span
+	traceName string
+	self      *Pid
+	sendLock  *sync.Mutex
+	Logger    contextLogger
+	deferred  []func()
+}
+
+//Trace enables distributed tracing for the actor
+//(quacktors will create a ChildSpan with the operationName
+//set to the provided name).
+func (c *Context) Trace(name string) {
+	if name == "" {
+		panic("actor trace name cannot be empty string")
+	}
+
+	c.traceName = name
+}
+
+func (c *Context) Span() opentracing.Span {
+	return c.span
 }
 
 func (c *Context) Defer(action func()) {
@@ -31,7 +49,12 @@ func (c *Context) Send(to *Pid, message Message) {
 	c.sendLock.Lock()
 	defer c.sendLock.Unlock()
 
-	doSend(to, message)
+	var spanContext opentracing.SpanContext
+	if c.span != nil {
+		spanContext = c.span.Context()
+	}
+
+	doSend(to, message, spanContext)
 }
 
 func (c *Context) SendAfter(to *Pid, message Message, duration time.Duration) Abortable {
@@ -96,7 +119,7 @@ func (c *Context) MonitorMachine(machine *Machine) Abortable {
 			"monitored_machine", machine.MachineId,
 			"monitor_pid", c.self.String())
 
-		doSend(c.self, DisconnectMessage{MachineId: machine.MachineId, Address: machine.Address})
+		doSend(c.self, DisconnectMessage{MachineId: machine.MachineId, Address: machine.Address}, nil)
 		return &noopAbortable{}
 	}
 
@@ -172,7 +195,7 @@ func (c *Context) Monitor(pid *Pid) Abortable {
 			"monitored_pid", pid.String(),
 			"monitor_pid", c.self.String())
 
-		doSend(c.self, DownMessage{Who: pid})
+		doSend(c.self, DownMessage{Who: pid}, nil)
 		return &noopAbortable{}
 	}
 }

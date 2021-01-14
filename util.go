@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"github.com/Azer0s/qpmd"
 	"github.com/gofrs/uuid"
+	"github.com/opentracing/opentracing-go"
 	"github.com/vmihailenco/msgpack/v5"
 	"net"
 	"strings"
@@ -20,6 +21,7 @@ type remoteMonitorTuple struct {
 type remoteMessageTuple struct {
 	To      *Pid
 	Message Message
+	opentracing.SpanContext
 }
 
 func try(err error) {

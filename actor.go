@@ -1,6 +1,9 @@
 package quacktors
 
-import "sync"
+import (
+	"github.com/opentracing/opentracing-go"
+	"sync"
+)
 
 //The Actor interface defines the methods a struct has to implement
 //so it can be spawned by quacktors.
@@ -52,7 +55,7 @@ func (s *StatelessActor) Run(ctx *Context, message Message) {
 	s.ReceiveFunction(ctx, message)
 }
 
-func doSend(to *Pid, message Message) {
+func doSend(to *Pid, message Message, spanContext opentracing.SpanContext) {
 	returnChan := make(chan bool)
 
 	go func() {
@@ -73,8 +76,9 @@ func doSend(to *Pid, message Message) {
 
 			if ok && m.connected {
 				m.messageChan <- remoteMessageTuple{
-					To:      to,
-					Message: message,
+					To:          to,
+					Message:     message,
+					SpanContext: spanContext,
 				}
 			}
 
@@ -88,23 +92,29 @@ func doSend(to *Pid, message Message) {
 			p, ok := getByPidId(to.Id)
 
 			if ok {
-				p.messageChan <- message
+				p.messageChan <- localMessage{
+					message:     message,
+					spanContext: spanContext,
+				}
 			}
 
 			return
 		}
 
-		to.messageChan <- message
+		to.messageChan <- localMessage{
+			message:     message,
+			spanContext: spanContext,
+		}
 	}()
 
 	<-returnChan
 }
 
 func startActor(actor Actor) *Pid {
-	quitChan := make(chan bool)             //channel to quit
-	messageChan := make(chan Message, 2000) //channel for messages
-	monitorChan := make(chan *Pid)          //channel to notify the actor of who wants to monitor it
-	demonitorChan := make(chan *Pid)        //channel to notify the actor of who wants to unmonitor it
+	quitChan := make(chan bool)                  //channel to quit
+	messageChan := make(chan localMessage, 2000) //channel for messages
+	monitorChan := make(chan *Pid)               //channel to notify the actor of who wants to monitor it
+	demonitorChan := make(chan *Pid)             //channel to notify the actor of who wants to unmonitor it
 
 	scheduled := make(map[string]chan bool)
 	monitorQuitChannels := make(map[string]chan bool)
@@ -163,15 +173,28 @@ func startActor(actor Actor) *Pid {
 				logger.Info("actor received quit event",
 					"pid", pid.String())
 				return
-			case message := <-messageChan:
-				switch message.(type) {
+			case m := <-messageChan:
+				switch m.message.(type) {
 				case PoisonPill:
 					logger.Info("actor received poison pill",
 						"pid", pid.String())
 					//Quit actor on PoisonPill message
 					return
 				default:
-					actor.Run(ctx, message)
+					ctx.span = nil
+
+					func() {
+						if m.spanContext != nil && ctx.traceName != "" {
+							span := opentracing.GlobalTracer().StartSpan(ctx.traceName,
+								opentracing.ChildOf(m.spanContext))
+							span.SetTag("pid", pid.String())
+							ctx.span = span
+
+							defer span.Finish()
+						}
+
+						actor.Run(ctx, m.message)
+					}()
 				}
 			case monitor := <-monitorChan:
 				logger.Info("actor received monitor request",
