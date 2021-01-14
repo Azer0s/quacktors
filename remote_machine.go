@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/Azer0s/qpmd"
+	"github.com/opentracing/opentracing-go"
 	"github.com/vmihailenco/msgpack/v5"
 	"net"
 	"sync"
@@ -18,6 +19,7 @@ const newConnectionMessageType = "new_connection"
 
 const fromVal = "from"
 const toVal = "to"
+const spanCtx = "span_ctx"
 
 const messageVal = "message"
 
@@ -102,7 +104,7 @@ func (m *Machine) setupMonitor(monitor *Pid) {
 		case <-monitorQuitChannel:
 			return
 		case <-monitorChannel:
-			doSend(monitor, DisconnectMessage{MachineId: m.MachineId, Address: m.Address})
+			doSend(monitor, DisconnectMessage{MachineId: m.MachineId, Address: m.Address}, nil)
 		}
 	}()
 }
@@ -124,7 +126,7 @@ func (m *Machine) setupRemoteMonitor(r remoteMonitorTuple) {
 		case <-monitorQuitChannel:
 			return
 		case <-monitorChannel:
-			doSend(r.From, DownMessage{Who: r.To})
+			doSend(r.From, DownMessage{Who: r.To}, nil)
 		}
 	}()
 }
@@ -174,9 +176,15 @@ func (m *Machine) startMessageClient(messageChan <-chan remoteMessageTuple, gate
 
 			_ = enc.Encode(&inter)
 
+			spanCtxBytes := &bytes.Buffer{}
+			if message.SpanContext != nil {
+				_ = opentracing.GlobalTracer().Inject(message.SpanContext, opentracing.Binary, spanCtxBytes)
+			}
+
 			b, err := msgpack.Marshal(map[string]interface{}{
 				toVal:      message.To.Id,
 				messageVal: byteBuf.Bytes(),
+				spanCtx:    spanCtxBytes.Bytes(),
 			})
 
 			if err != nil {

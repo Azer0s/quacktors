@@ -1,5 +1,12 @@
 package quacktors
 
+import "github.com/opentracing/opentracing-go"
+
+type localMessage struct {
+	message     Message
+	spanContext opentracing.SpanContext
+}
+
 //The Message interface defines all methods a struct has
 //to implement so it can be sent around by actors.
 type Message interface {

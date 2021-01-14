@@ -71,6 +71,42 @@ SpawnWithInit(func(ctx *Context) {
 Wait()
 ```
 
+### Tracing
+
+quacktors supports [opentracing](https://opentracing.io/) out of the box! It's as easy as setting the global tracer (and optionally providing a span to the root context).
+
+```go
+cfg := jaegercfg.Configuration{
+    ServiceName: "TestNewSystemWithHandler",
+    Sampler: &jaegercfg.SamplerConfig{
+        Type:  jaeger.SamplerTypeConst,
+        Param: 1,
+    },
+    Reporter: &jaegercfg.ReporterConfig{
+        LogSpans: true,
+    },
+}
+tracer, closer, _ := cfg.NewTracer()
+defer closer.Close()
+
+opentracing.SetGlobalTracer(tracer)
+
+span := opentracing.GlobalTracer().StartSpan("root")
+defer span.Finish()
+rootCtx := RootContextWithSpan(span)
+
+a1 := SpawnWithInit(func(ctx *Context) {
+	ctx.Trace("a1")
+}, func(ctx *Context, message Message) {
+	ctx.Span().SetTag("message_type", message.Type())
+	<-time.After(3 * time.Second)
+})
+
+rootCtx.Send(a1, EmptyMessage{})
+
+Wait()
+```
+
 ### Supervision
 
 quacktors comes with some cool standard components, one of which is the supervisor. The supervisor (as the name implies) supervises one or many named actors and reacts to failures according to a set strategy.

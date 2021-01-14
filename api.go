@@ -3,6 +3,7 @@ package quacktors
 import (
 	"encoding/gob"
 	"errors"
+	"github.com/opentracing/opentracing-go"
 	"reflect"
 	"regexp"
 	"strings"
@@ -40,13 +41,6 @@ func RegisterType(message Message) {
 	)
 }
 
-var rootContext = Context{
-	self:     &Pid{Id: "root"},
-	Logger:   contextLogger{pid: "root"},
-	sendLock: &sync.Mutex{},
-	deferred: make([]func(), 0),
-}
-
 //RootContext returns a context that can be used outside an Actor.
 //It is not associated with a real PID and therefore, one should
 //not call anything with the RootContext that requires it to be
@@ -54,7 +48,26 @@ var rootContext = Context{
 func RootContext() Context {
 	callInitIfNotCalled()
 
-	return rootContext
+	return Context{
+		self:     &Pid{Id: "root", MachineId: machineId},
+		Logger:   contextLogger{pid: "root"},
+		sendLock: &sync.Mutex{},
+		deferred: make([]func(), 0),
+	}
+}
+
+//RootContextWithSpan is the same as RootContext but with a tracing
+//span attached to it so it will do distributed tracing.
+func RootContextWithSpan(span opentracing.Span) Context {
+	callInitIfNotCalled()
+
+	return Context{
+		self:     &Pid{Id: "root", MachineId: machineId},
+		Logger:   contextLogger{pid: "root"},
+		sendLock: &sync.Mutex{},
+		deferred: make([]func(), 0),
+		span:     span,
+	}
 }
 
 //Spawn spawns an Actor from an anonymous receive function and

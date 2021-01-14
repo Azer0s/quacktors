@@ -5,6 +5,7 @@ import (
 	"encoding/gob"
 	"errors"
 	"github.com/Azer0s/qpmd"
+	"github.com/opentracing/opentracing-go"
 	"github.com/vmihailenco/msgpack/v5"
 	"io"
 	"net"
@@ -132,7 +133,14 @@ func handleMessageClient(conn net.Conn) {
 				}
 			}
 
-			doSend(toPid, msg)
+			spanCtxBytes := bytes.NewBuffer(data[spanCtx].([]byte))
+			var spanCtx opentracing.SpanContext = nil
+
+			if spanCtxBytes.Len() != 0 {
+				spanCtx, _ = opentracing.GlobalTracer().Extract(opentracing.Binary, spanCtxBytes)
+			}
+
+			doSend(toPid, msg, spanCtx)
 		}(msgData)
 	}
 }
