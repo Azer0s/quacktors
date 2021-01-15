@@ -121,10 +121,11 @@ func startActor(actor Actor) *Pid {
 
 	pid := createPid(quitChan, messageChan, monitorChan, demonitorChan, scheduled, monitorQuitChannels)
 	ctx := &Context{
-		self:     pid,
-		Logger:   contextLogger{pid: pid.Id},
-		sendLock: &sync.Mutex{},
-		deferred: make([]func(), 0),
+		self:      pid,
+		Logger:    contextLogger{pid: pid.Id},
+		sendLock:  &sync.Mutex{},
+		deferred:  make([]func(), 0),
+		traceFork: opentracing.FollowsFrom,
 	}
 
 	actor.Init(ctx)
@@ -186,7 +187,7 @@ func startActor(actor Actor) *Pid {
 					func() {
 						if m.spanContext != nil && ctx.traceName != "" {
 							span := opentracing.GlobalTracer().StartSpan(ctx.traceName,
-								opentracing.ChildOf(m.spanContext))
+								ctx.traceFork(m.spanContext))
 							span.SetTag("pid", pid.String())
 							ctx.span = span
 

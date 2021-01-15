@@ -62,11 +62,12 @@ func RootContextWithSpan(span opentracing.Span) Context {
 	callInitIfNotCalled()
 
 	return Context{
-		self:     &Pid{Id: "root", MachineId: machineId},
-		Logger:   contextLogger{pid: "root"},
-		sendLock: &sync.Mutex{},
-		deferred: make([]func(), 0),
-		span:     span,
+		self:      &Pid{Id: "root", MachineId: machineId},
+		Logger:    contextLogger{pid: "root"},
+		sendLock:  &sync.Mutex{},
+		deferred:  make([]func(), 0),
+		span:      span,
+		traceFork: opentracing.FollowsFrom,
 	}
 }
 

@@ -9,6 +9,7 @@ import (
 
 type Context struct {
 	span      opentracing.Span
+	traceFork func(ctx opentracing.SpanContext) opentracing.SpanReference
 	traceName string
 	self      *Pid
 	sendLock  *sync.Mutex
@@ -25,6 +26,13 @@ func (c *Context) Trace(name string) {
 	}
 
 	c.traceName = name
+}
+
+//TraceFork sets the default fork mechanism for
+//incoming SpanContexts. By default, this is set
+//to opentracing.FollowsFrom.
+func (c *Context) TraceFork(traceFork func(ctx opentracing.SpanContext) opentracing.SpanReference) {
+	c.traceFork = traceFork
 }
 
 func (c *Context) Span() opentracing.Span {
