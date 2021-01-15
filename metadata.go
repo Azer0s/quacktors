@@ -67,7 +67,7 @@ func deleteMachine(machineId string) {
 }
 
 //Wait waits until all actors have quit.
-func Wait() {
+func Run() {
 	systemWg.Wait()
 }
 

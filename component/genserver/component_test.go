@@ -39,7 +39,7 @@ func TestGenServerCast(t *testing.T) {
 	context := quacktors.RootContext()
 	context.Kill(genServerPid)
 
-	quacktors.Wait()
+	quacktors.Run()
 }
 
 func TestGenServerCall(t *testing.T) {
@@ -52,7 +52,7 @@ func TestGenServerCall(t *testing.T) {
 	context := quacktors.RootContext()
 	context.Kill(genServerPid)
 
-	quacktors.Wait()
+	quacktors.Run()
 }
 
 func TestGenServerInfo(t *testing.T) {
@@ -61,7 +61,7 @@ func TestGenServerInfo(t *testing.T) {
 	context := quacktors.RootContext()
 	context.Send(genServerPid, quacktors.GenericMessage{Value: t})
 
-	quacktors.Wait()
+	quacktors.Run()
 }
 
 func TestDeadGenServerCast(t *testing.T) {
@@ -73,7 +73,7 @@ func TestDeadGenServerCast(t *testing.T) {
 
 	assert.Error(t, err)
 
-	quacktors.Wait()
+	quacktors.Run()
 }
 
 func TestDeadGenServerCall(t *testing.T) {
@@ -85,5 +85,5 @@ func TestDeadGenServerCall(t *testing.T) {
 
 	assert.Error(t, err)
 
-	quacktors.Wait()
+	quacktors.Run()
 }

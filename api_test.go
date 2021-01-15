@@ -37,7 +37,7 @@ func TestMessageOrdering(t *testing.T) {
 
 	rootCtx.Send(pid, PoisonPill{})
 
-	Wait()
+	Run()
 }
 
 func TestMonitorWithKill(t *testing.T) {
@@ -65,7 +65,7 @@ func TestMonitorWithKill(t *testing.T) {
 
 	rootCtx.Kill(p)
 
-	Wait()
+	Run()
 }
 
 func TestMonitorWithPoisonPill(t *testing.T) {
@@ -93,7 +93,7 @@ func TestMonitorWithPoisonPill(t *testing.T) {
 
 	rootCtx.Send(p, PoisonPill{})
 
-	Wait()
+	Run()
 }
 
 func TestMonitorAbortable_Abort(t *testing.T) {
@@ -129,7 +129,7 @@ func TestMonitorAbortable_Abort(t *testing.T) {
 
 	rootCtx.Send(q, GenericMessage{Value: ""})
 
-	Wait()
+	Run()
 }
 
 func TestMonitorDeadPid(t *testing.T) {
@@ -151,7 +151,7 @@ func TestMonitorDeadPid(t *testing.T) {
 		}
 	})
 
-	Wait()
+	Run()
 }
 
 type TestMessage struct {
@@ -187,7 +187,7 @@ func TestNewSystemWithHandler(t *testing.T) {
 
 	s.HandleRemote("printer", p)
 
-	Wait()
+	Run()
 
 	<-time.After(1 * time.Second)
 }
@@ -208,7 +208,7 @@ func TestContext_MonitorMachine(t *testing.T) {
 		ctx.Quit()
 	})
 
-	Wait()
+	Run()
 }
 
 func TestConnect(t *testing.T) {
@@ -286,7 +286,7 @@ func TestConnectRemoteMonitor(t *testing.T) {
 	rootCtx := RootContext()
 	rootCtx.Kill(p)
 
-	Wait()
+	Run()
 }
 
 func TestConnectPoisonPill(t *testing.T) {
@@ -345,5 +345,5 @@ func TestContext_SendAfter(t *testing.T) {
 
 	rootContext.Kill(p)
 
-	Wait()
+	Run()
 }

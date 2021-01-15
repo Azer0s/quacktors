@@ -46,7 +46,7 @@ func TestRelayComponent(t *testing.T) {
 
 	rootCtx.Send(p, quacktors.GenericMessage{Value: "init_1"})
 
-	quacktors.Wait()
+	quacktors.Run()
 }
 
 var count = 0
@@ -98,7 +98,7 @@ func TestSupervisorOneForOne(t *testing.T) {
 
 	rootCtx.Send(supervisorPid, quacktors.KillMessage{})
 
-	quacktors.Wait()
+	quacktors.Run()
 }
 
 func TestSupervisorAllForOne(t *testing.T) {
@@ -123,7 +123,7 @@ func TestSupervisorAllForOne(t *testing.T) {
 
 	rootCtx.Send(supervisorPid, quacktors.KillMessage{})
 
-	quacktors.Wait()
+	quacktors.Run()
 }
 
 func TestSupervisorFailAll(t *testing.T) {
@@ -151,7 +151,7 @@ func TestSupervisorFailAll(t *testing.T) {
 
 	rootCtx.Send(p, quacktors.GenericMessage{})
 
-	quacktors.Wait()
+	quacktors.Run()
 }
 
 func TestLink(t *testing.T) {
@@ -181,5 +181,5 @@ func TestLink(t *testing.T) {
 	context.Kill(p1)
 
 	wg.Wait()
-	quacktors.Wait()
+	quacktors.Run()
 }

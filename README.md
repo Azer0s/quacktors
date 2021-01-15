@@ -7,13 +7,13 @@
 quacktors or "quick actors" is a Go framework that brings Erlang/Elixir style concurrency to Go! It allows for message passing, actor monitoring and can even deal with remote actors/systems. Furthermore, it comes with plenty of useful standard modules for building actor model systems (like Supervisors, Relays, etc.). Oh and btw: quacktors is super easy to use!
 
 ```go
-rootCtx := RootContext()
+rootCtx := quacktors.RootContext()
 
-pid := Spawn(func(ctx *Context, message Message) {
+pid := quacktors.Spawn(func(ctx *quacktors.Context, message quacktors.Message) {
     fmt.Println("Hello, quacktors!")
 })
 
-rootCtx.Send(pid, EmptyMessage{})
+rootCtx.Send(pid, quacktors.EmptyMessage{})
 ```
 
 <br>
@@ -24,29 +24,29 @@ To get started, you'll need an installation of qpmd (see: [qpmd](https://github.
 The quacktor port mapper daemon is responsible for keeping track of all running systems and quacktor instances on your local machine and acts as a "DNS server" for remote machines that want to connect to a local system.
 
 ```go
-import . "github.com/Azer0s/quacktors"
+import "github.com/Azer0s/quacktors"
 
-foo := NewSystem("foo")
+foo := quacktors.NewSystem("foo")
 
-pid := Spawn(func(ctx *Context, message Message) {
+pid := quacktors.Spawn(func(ctx *quacktors.Context, message quacktors.Message) {
     switch m := message.(type) {
-    case GenericMessage:
+    case quacktors.GenericMessage:
         fmt.Println(m.Value)
     }
 })
 
 foo.HandleRemote("printer", pid)
 
-Wait()
+quacktors.Run()
 ```
 
 ```go
-rootCtx := RootContext()
+rootCtx := quacktors.RootContext()
 
-node := Connect("foo@localhost")
+node := quacktors.Connect("foo@localhost")
 printer, ok := node.Remote("printer")
 
-rootCtx.Send(printer, GenericMessage{Value: "Hello, world"})
+rootCtx.Send(printer, quacktors.GenericMessage{Value: "Hello, world"})
 ```
 
 ### Monitoring actors
@@ -54,21 +54,21 @@ rootCtx.Send(printer, GenericMessage{Value: "Hello, world"})
 quacktors can monitor both local, as well as remote actors. As soon as the monitored actor goes down, a `DownMessage` is sent out to the monitoring actor.
 
 ```go
-pid := Spawn(func(ctx *Context, message Message) {
+pid := quacktors.Spawn(func(ctx *quacktors.Context, message quacktors.Message) {
 })
 
-SpawnWithInit(func(ctx *Context) {
+quacktors.SpawnWithInit(func(ctx *quacktors.Context) {
     ctx.Monitor(pid)
-}, func(ctx *Context, message Message) {
+}, func(ctx *quacktors.Context, message quacktors.Message) {
     switch m := message.(type) {
-        case DownMessage:
+        case quacktors.DownMessage:
             ctx.Logger.Info("received down message from other actor", 
                 "pid", m.String())
             ctx.Quit()
     }
 })
 
-Wait()
+quacktors.Run()
 ```
 
 ### Tracing
@@ -93,18 +93,18 @@ opentracing.SetGlobalTracer(tracer)
 
 span := opentracing.GlobalTracer().StartSpan("root")
 defer span.Finish()
-rootCtx := RootContextWithSpan(span)
+rootCtx := quacktors.RootContextWithSpan(span)
 
-a1 := SpawnWithInit(func(ctx *Context) {
+a1 := quacktors.SpawnWithInit(func(ctx *quacktors.Context) {
 	ctx.Trace("a1")
-}, func(ctx *Context, message Message) {
+}, func(ctx *quacktors.Context, message quacktors.Message) {
 	ctx.Span().SetTag("message_type", message.Type())
 	<-time.After(3 * time.Second)
 })
 
-rootCtx.Send(a1, EmptyMessage{})
+rootCtx.Send(a1, quacktors.EmptyMessage{})
 
-Wait()
+quacktors.Run()
 ```
 
 ### Supervision
@@ -112,7 +112,7 @@ Wait()
 quacktors comes with some cool standard components, one of which is the supervisor. The supervisor (as the name implies) supervises one or many named actors and reacts to failures according to a set strategy.
 
 ```go
-SpawnStateful(component.Supervisor(component.ALL_FOR_ONE_STRATEGY, map[string]Actor{
+quacktors.SpawnStateful(component.Supervisor(component.ALL_FOR_ONE_STRATEGY, map[string]Actor{
     "1": &superImportantActor{id: 1},
     "2": &superImportantActor{id: 2},
     "3": &superImportantActor{id: 3},
@@ -129,11 +129,11 @@ Sending messages in quacktors is completely location transparent, meaning no mor
 PIDs in quacktors are floating, meaning you can send a PID to a remote machine as a message and use that same PID there as you would use any other PID.
 
 ```go
-foo := NewSystem("foo")
+foo := quacktors.NewSystem("foo")
 
-ping := Spawn(func(ctx *Context, message Message) {
+ping := quacktors.Spawn(func(ctx *quacktors.Context, message quacktors.Message) {
     switch m := message.(type) {
-    case Pid:
+    case quacktors.Pid:
         ctx.Logger.Info("ping")
         <- time.After(1 * time.Second)
         ctx.Send(&m, *ctx.Self())
@@ -142,17 +142,17 @@ ping := Spawn(func(ctx *Context, message Message) {
 
 foo.HandleRemote("ping", ping)
 
-Wait()
+quacktors.Run()
 ```
 
 ```go
-rootCtx := RootContext()
+rootCtx := quacktors.RootContext()
 
-bar := NewSystem("bar")
+bar := quacktors.NewSystem("bar")
 
-pong := Spawn(func(ctx *Context, message Message) {
+pong := quacktors.Spawn(func(ctx *quacktors.Context, message quacktors.Message) {
     switch m := message.(type) {
-    case Pid:
+    case quacktors.Pid:
         ctx.Logger.Info("pong")
         <- time.After(1 * time.Second)
         ctx.Send(&m, *ctx.Self())
@@ -161,12 +161,12 @@ pong := Spawn(func(ctx *Context, message Message) {
 
 bar.HandleRemote("pong", pong)
 
-foo := Connect("foo@localhost")
+foo := quacktors.Connect("foo@localhost")
 ping := foo.Remote("ping")
 
 rootCtx.Send(ping, *pong)
 
-Wait()
+quacktors.Run()
 ```
 
 ### GenServers
@@ -186,14 +186,18 @@ type Printer struct {
     //printing magic
 }
 
-func (p Printer) HandlePrintRequestCall(ctx *Context, message PrintRequest) Message {
+func (p Printer) InitGenServer(ctx *quacktors.Context) {
+	ctx.Trace("printer")
+}
+
+func (p Printer) HandlePrintRequestCall(ctx *quacktors.Context, message PrintRequest) Message {
     //print stuff
 	
-    return EmptyMessage{}
+    return quacktors.EmptyMessage{}
 }
 
 
-pid := Spawn(genserver.New(Printer{}))
+pid := quacktors.Spawn(genserver.New(Printer{}))
 res, err := genserver.Call(pid, PrintRequest{})
 ```
 
