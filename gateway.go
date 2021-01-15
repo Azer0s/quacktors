@@ -133,14 +133,12 @@ func handleMessageClient(conn net.Conn) {
 				}
 			}
 
-			spanCtxBytes := bytes.NewBuffer(data[spanCtx].([]byte))
-			var spanCtx opentracing.SpanContext = nil
-
-			if spanCtxBytes.Len() != 0 {
-				spanCtx, _ = opentracing.GlobalTracer().Extract(opentracing.Binary, spanCtxBytes)
+			var spanContext opentracing.SpanContext = nil
+			if spanCtxBytes, ok := data[spanCtx].([]byte); ok && len(spanCtxBytes) != 0 {
+				spanContext, _ = opentracing.GlobalTracer().Extract(opentracing.Binary, bytes.NewBuffer(spanCtxBytes))
 			}
 
-			doSend(toPid, msg, spanCtx)
+			doSend(toPid, msg, spanContext)
 		}(msgData)
 	}
 }
