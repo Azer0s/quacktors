@@ -96,10 +96,10 @@ defer span.Finish()
 rootCtx := quacktors.RootContextWithSpan(span)
 
 a1 := quacktors.SpawnWithInit(func(ctx *quacktors.Context) {
-	ctx.Trace("a1")
+    ctx.Trace("a1")
 }, func(ctx *quacktors.Context, message quacktors.Message) {
-	ctx.Span().SetTag("message_type", message.Type())
-	<-time.After(3 * time.Second)
+    ctx.Span().SetTag("message_type", message.Type())
+    <-time.After(3 * time.Second)
 })
 
 rootCtx.Send(a1, quacktors.EmptyMessage{})
