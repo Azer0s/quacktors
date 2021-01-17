@@ -129,7 +129,7 @@ func New(server GenServer) quacktors.Actor {
 //This operation is blocking and should be used if
 //you need to make sure a GenServer has processed a
 //message.
-func Call(pid *quacktors.Pid, message quacktors.Message) (ResponseMessage, error) {
+func Call(context quacktors.Context, pid *quacktors.Pid, message quacktors.Message) (ResponseMessage, error) {
 	returnChan := make(chan ResponseMessage)
 	errChan := make(chan bool)
 
@@ -146,7 +146,6 @@ func Call(pid *quacktors.Pid, message quacktors.Message) (ResponseMessage, error
 		ctx.Quit()
 	})
 
-	context := quacktors.RootContext()
 	context.Send(pid, callMessage{
 		sender:  p,
 		message: message,
@@ -170,7 +169,7 @@ func Call(pid *quacktors.Pid, message quacktors.Message) (ResponseMessage, error
 //short time) and should be used if you need to make
 //sure a GenServer has received a message but don't
 //care whether the GenServer has failed or not.
-func Cast(pid *quacktors.Pid, message quacktors.Message) (ReceivedMessage, error) {
+func Cast(context quacktors.Context, pid *quacktors.Pid, message quacktors.Message) (ReceivedMessage, error) {
 	returnChan := make(chan ReceivedMessage)
 	errChan := make(chan bool)
 
@@ -187,7 +186,6 @@ func Cast(pid *quacktors.Pid, message quacktors.Message) (ReceivedMessage, error
 		ctx.Quit()
 	})
 
-	context := quacktors.RootContext()
 	context.Send(pid, castMessage{
 		sender:  p,
 		message: message,

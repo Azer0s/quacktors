@@ -196,6 +196,9 @@ func startActor(actor Actor) *Pid {
 
 						actor.Run(ctx, m.message)
 					}()
+
+					//Clean after run so the span won't be sent in any defers if the actor goes down right after
+					ctx.span = nil
 				}
 			case monitor := <-monitorChan:
 				logger.Info("actor received monitor request",

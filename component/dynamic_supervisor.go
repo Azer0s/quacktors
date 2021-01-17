@@ -10,26 +10,66 @@ type actorPidTuple struct {
 	pid  *quacktors.Pid
 }
 
-func DynamicSupervisor(strategy strategy, actors []quacktors.Actor) (supervisor quacktors.Actor, actorPids []*quacktors.Pid) {
-	mapping := make([]actorPidTuple, 0)
+type dynamicSupervisorComponent struct {
+	supervisor    quacktors.Actor
+	supervisorPid *quacktors.Pid
+	actorPids     []*quacktors.Pid
+	mapping       []actorPidTuple
+}
+
+func (d *dynamicSupervisorComponent) Init(ctx *quacktors.Context) {
+	d.actorPids = make([]*quacktors.Pid, 0)
+
+	for _, tuple := range d.mapping {
+		relayPid := quacktors.SpawnStateful(Relay(tuple.name))
+		d.actorPids = append(d.actorPids, relayPid)
+
+		ctx.Defer(func() {
+			ctx.Kill(relayPid)
+		})
+	}
+
+	d.supervisorPid = quacktors.SpawnStateful(d.supervisor)
+
+	ctx.Defer(func() {
+		ctx.Kill(d.supervisorPid)
+	})
+
+	ctx.Monitor(d.supervisorPid)
+}
+
+func (d *dynamicSupervisorComponent) Run(ctx *quacktors.Context, msg quacktors.Message) {
+	switch m := msg.(type) {
+	case quacktors.DownMessage:
+		if m.Who.Is(d.supervisorPid) {
+			ctx.Kill(ctx.Self())
+		}
+	case quacktors.KillMessage:
+		ctx.Send(ctx.Self(), quacktors.PoisonPill{})
+	}
+}
+
+func (d *dynamicSupervisorComponent) Pids() []*quacktors.Pid {
+	return d.actorPids
+}
+
+func DynamicSupervisor(strategy strategy, actors []quacktors.Actor) *dynamicSupervisorComponent {
+	d := dynamicSupervisorComponent{}
+
+	d.mapping = make([]actorPidTuple, 0)
 	actorMap := make(map[string]quacktors.Actor)
 
 	for _, actor := range actors {
 		id, _ := uuid.NewV4()
 
-		mapping = append(mapping, actorPidTuple{
+		d.mapping = append(d.mapping, actorPidTuple{
 			name: id.String(),
 			pid:  nil,
 		})
 		actorMap[id.String()] = actor
 	}
 
-	supervisor = Supervisor(strategy, actorMap)
-	actorPids = make([]*quacktors.Pid, 0)
+	d.supervisor = Supervisor(strategy, actorMap)
 
-	for _, tuple := range mapping {
-		actorPids = append(actorPids, quacktors.SpawnStateful(Relay(tuple.name)))
-	}
-
-	return
+	return &d
 }

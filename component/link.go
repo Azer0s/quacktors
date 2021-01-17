@@ -2,8 +2,8 @@ package component
 
 import "github.com/Azer0s/quacktors"
 
-//The Link component links two PIDs together, so when
-//one goes down, so does the other.
+//Link links two PIDs together, so when
+//one goes down, the other one does too.
 func Link(from *quacktors.Pid, to *quacktors.Pid) quacktors.Actor {
 	return &linkComponent{
 		from: from,

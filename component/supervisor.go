@@ -50,6 +50,11 @@ func (s *supervisorComponent) setupActor(ctx *quacktors.Context, id string, acto
 
 		s.monitors[id] = ctx.Monitor(p)
 
+		if pid, ok := (*register)[id]; ok {
+			//delete old PID if it exists
+			ctx.Kill(pid)
+		}
+
 		(*register)[id] = p
 	})
 }

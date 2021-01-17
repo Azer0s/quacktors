@@ -61,7 +61,9 @@ func (t *testActor) Init(ctx *quacktors.Context) {
 }
 
 func (t *testActor) Run(ctx *quacktors.Context, message quacktors.Message) {
-
+	if _, ok := message.(quacktors.KillMessage); ok {
+		ctx.Quit()
+	}
 }
 
 func TestSupervisorOneForOne(t *testing.T) {
@@ -146,6 +148,90 @@ func TestSupervisorFailAll(t *testing.T) {
 			register.UsePid("1", func(pid *quacktors.Pid) {
 				ctx.Kill(pid)
 			})
+		}
+	})
+
+	rootCtx.Send(p, quacktors.GenericMessage{})
+
+	quacktors.Run()
+}
+
+func TestDynamicSupervisorOneForOne(t *testing.T) {
+	count = 0
+
+	rootCtx := quacktors.RootContext()
+
+	dynamicSupervisor := DynamicSupervisor(ONE_FOR_ONE_STRATEGY, []quacktors.Actor{
+		&testActor{id: 1},
+		&testActor{id: 2},
+		&testActor{id: 3},
+		&testActor{id: 4},
+	})
+
+	supervisorPid := quacktors.SpawnStateful(dynamicSupervisor)
+	pids := dynamicSupervisor.Pids()
+
+	rootCtx.Send(pids[0], quacktors.KillMessage{})
+	rootCtx.Send(pids[1], quacktors.KillMessage{})
+	rootCtx.Send(pids[2], quacktors.KillMessage{})
+	rootCtx.Send(pids[3], quacktors.KillMessage{})
+
+	<-time.After(1 * time.Second)
+
+	assert.Equal(t, 8, count)
+
+	rootCtx.Send(supervisorPid, quacktors.KillMessage{})
+
+	quacktors.Run()
+}
+
+func TestDynamicSupervisorAllForOne(t *testing.T) {
+	count = 0
+
+	rootCtx := quacktors.RootContext()
+
+	dynamicSupervisor := DynamicSupervisor(ALL_FOR_ONE_STRATEGY, []quacktors.Actor{
+		&testActor{id: 1},
+		&testActor{id: 2},
+		&testActor{id: 3},
+		&testActor{id: 4},
+	})
+
+	supervisorPid := quacktors.SpawnStateful(dynamicSupervisor)
+	pids := dynamicSupervisor.Pids()
+
+	rootCtx.Send(pids[0], quacktors.KillMessage{})
+
+	<-time.After(1 * time.Second)
+
+	assert.Equal(t, 8, count)
+
+	rootCtx.Send(supervisorPid, quacktors.KillMessage{})
+
+	quacktors.Run()
+}
+
+func TestDynamicSupervisorFailAll(t *testing.T) {
+	rootCtx := quacktors.RootContext()
+
+	dynamicSupervisor := DynamicSupervisor(FAIL_ALL_STRATEGY, []quacktors.Actor{
+		&testActor{id: 1},
+		&testActor{id: 2},
+		&testActor{id: 3},
+		&testActor{id: 4},
+	})
+
+	supervisorPid := quacktors.SpawnStateful(dynamicSupervisor)
+	pids := dynamicSupervisor.Pids()
+
+	p := quacktors.SpawnWithInit(func(ctx *quacktors.Context) {
+		ctx.Monitor(supervisorPid)
+	}, func(ctx *quacktors.Context, message quacktors.Message) {
+		switch message.(type) {
+		case quacktors.DownMessage:
+			ctx.Quit()
+		default:
+			ctx.Send(pids[0], quacktors.KillMessage{})
 		}
 	})
 

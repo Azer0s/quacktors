@@ -32,7 +32,7 @@ func (t testGenServer) HandleGenericMessageCall(ctx *quacktors.Context, message 
 func TestGenServerCast(t *testing.T) {
 	genServerPid := quacktors.SpawnStateful(New(testGenServer{}))
 
-	r, _ := Cast(genServerPid, quacktors.EmptyMessage{})
+	r, _ := Cast(quacktors.RootContext(), genServerPid, quacktors.EmptyMessage{})
 
 	assert.Equal(t, "ReceivedMessage", r.Type())
 
@@ -45,7 +45,7 @@ func TestGenServerCast(t *testing.T) {
 func TestGenServerCall(t *testing.T) {
 	genServerPid := quacktors.SpawnStateful(New(testGenServer{}))
 
-	r, _ := Call(genServerPid, quacktors.GenericMessage{Value: "Hi"})
+	r, _ := Call(quacktors.RootContext(), genServerPid, quacktors.GenericMessage{Value: "Hi"})
 
 	assert.Equal(t, "Hi back!", r.Message.(quacktors.GenericMessage).Value)
 
@@ -69,7 +69,7 @@ func TestDeadGenServerCast(t *testing.T) {
 	context := quacktors.RootContext()
 	context.Send(genServerPid, quacktors.PoisonPill{})
 
-	_, err := Cast(genServerPid, quacktors.EmptyMessage{})
+	_, err := Cast(context, genServerPid, quacktors.EmptyMessage{})
 
 	assert.Error(t, err)
 
@@ -81,7 +81,7 @@ func TestDeadGenServerCall(t *testing.T) {
 	context := quacktors.RootContext()
 	context.Send(genServerPid, quacktors.PoisonPill{})
 
-	_, err := Call(genServerPid, quacktors.GenericMessage{Value: "Hi"})
+	_, err := Call(context, genServerPid, quacktors.GenericMessage{Value: "Hi"})
 
 	assert.Error(t, err)
 
