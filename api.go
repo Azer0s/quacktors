@@ -71,6 +71,22 @@ func RootContextWithSpan(span opentracing.Span) Context {
 	}
 }
 
+//VectorContext creates a context with a custom name and
+//opentracing.Span. This allows for integrating applications
+//with quacktors.
+func VectorContext(name string, span opentracing.Span) Context {
+	callInitIfNotCalled()
+
+	return Context{
+		self:      &Pid{Id: name, MachineId: machineId},
+		Logger:    contextLogger{pid: name},
+		sendLock:  &sync.Mutex{},
+		deferred:  make([]func(), 0),
+		span:      span,
+		traceFork: opentracing.FollowsFrom,
+	}
+}
+
 //Spawn spawns an Actor from an anonymous receive function and
 //returns the *Pid of the Actor.
 func Spawn(action func(ctx *Context, message Message)) *Pid {
