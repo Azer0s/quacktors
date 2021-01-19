@@ -269,3 +269,36 @@ func TestLink(t *testing.T) {
 	wg.Wait()
 	quacktors.Run()
 }
+
+func TestLoadBalancer(t *testing.T) {
+	count = 0
+	usage := 1
+
+	lb := LoadBalancer(10, &testActor{id: 1}, func() uint16 {
+		return uint16(usage)
+	})
+
+	//load balancer should spin up 1 testActor
+	lbPid := quacktors.SpawnStateful(lb)
+	context := quacktors.RootContext()
+
+	usage = 11
+
+	//load balancer should spin up a second testActor
+	context.Send(lbPid, quacktors.GenericMessage{})
+
+	//load balancer should repair itself
+	context.Send(lbPid, quacktors.KillMessage{})
+	<-time.After(1 * time.Second)
+	assert.Equal(t, 3, count)
+
+	usage = 21
+
+	//load balancer should spin up a third testActor
+	context.Send(lbPid, quacktors.GenericMessage{})
+	<-time.After(1 * time.Second)
+	assert.Equal(t, 4, count)
+
+	context.Send(lbPid, quacktors.PoisonPill{})
+	quacktors.Run()
+}

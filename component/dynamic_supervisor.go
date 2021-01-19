@@ -53,6 +53,12 @@ func (d *dynamicSupervisorComponent) Pids() []*quacktors.Pid {
 	return d.actorPids
 }
 
+//DynamicSupervisor returns a dynamic supervisor component.
+//It is functionally the same as the Supervisor with the key
+//difference being that child actors of the dynamic supervisor
+//don't use named actors but can be addressed via PIDs
+//(internally it still uses named actors but automatically creates
+//and manages relays for each child).
 func DynamicSupervisor(strategy strategy, actors []quacktors.Actor) *dynamicSupervisorComponent {
 	d := dynamicSupervisorComponent{}
 
