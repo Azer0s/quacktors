@@ -2,7 +2,7 @@
 
 ## quacktors
 
-![Github Action](https://github.com/Azer0s/quacktors/workflows/Go/badge.svg) ![Go Report Card](https://goreportcard.com/badge/github.com/Azer0s/quacktors) [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://github.com/Azer0s/quacktors/blob/master/LICENSE.md)
+![Github Action](https://github.com/Azer0s/quacktors/workflows/Go/badge.svg) [![Go Reference](https://pkg.go.dev/badge/github.com/Azer0s/quacktors.svg)](https://pkg.go.dev/github.com/Azer0s/quacktors) [![Go Report](https://goreportcard.com/badge/github.com/Azer0s/quacktors)](https://goreportcard.com/badge/github.com/Azer0s/quacktors) [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://github.com/Azer0s/quacktors/blob/master/LICENSE.md)
 
 quacktors or "quick actors" is a Go framework that brings Erlang/Elixir style concurrency to Go! It allows for message passing, actor monitoring and can even deal with remote actors/systems. Furthermore, it comes with plenty of useful standard modules for building actor model systems (like Supervisors, Relays, etc.). Oh and btw: quacktors is super easy to use!
 
