@@ -97,12 +97,12 @@ func handleMessageClient(conn net.Conn) {
 
 			logger.Trace("received new message from remote machine for pid on local system",
 				"client", c,
-				"pid_id", pidId)
+				"pid", pidId)
 
 			if !ok {
 				logger.Warn("couldn't find pid id target of remote message on local system",
 					"client", c,
-					"pid_id", pidId)
+					"pid", pidId)
 				return
 			}
 
@@ -116,7 +116,7 @@ func handleMessageClient(conn net.Conn) {
 			if err != nil {
 				logger.Warn("there was an error while decoding incoming message from remote machine",
 					"client", c,
-					"pid_id", pidId)
+					"pid", pidId)
 				return
 			}
 
@@ -320,12 +320,12 @@ func handleGpRequest(req qpmd.Request, client string) {
 
 		logger.Debug("received quit command from remote machine for pid on local system",
 			"client", client,
-			"pid_id", pidId)
+			"pid", pidId)
 
 		if !ok {
 			logger.Warn("couldn't find pid id target of remote kill command on local system",
 				"client", client,
-				"pid_id", pidId)
+				"pid", pidId)
 			return
 		}
 
@@ -355,7 +355,7 @@ func handleGpRequest(req qpmd.Request, client string) {
 		if !ok {
 			logger.Warn("couldn't find pid id target of remote monitor request on local system",
 				"client", client,
-				"pid_id", toPid.Id)
+				"pid", toPid.Id)
 			return
 		}
 

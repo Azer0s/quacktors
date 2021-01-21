@@ -112,7 +112,7 @@ func (c *Context) Kill(pid *Pid) {
 	go func() {
 		if pid.MachineId != machineId {
 			logger.Debug("pid to kill is not on this machine, forwarding to remote machine",
-				"target_pid", pid.String(),
+				"target_gpid", pid.String(),
 				"machine_id", pid.MachineId)
 
 			m, ok := getMachine(pid.MachineId)
@@ -123,7 +123,7 @@ func (c *Context) Kill(pid *Pid) {
 			}
 
 			logger.Warn("remote machine is not registered, couldn't kill pid",
-				"target_pid", pid.String(),
+				"target_gpid", pid.String(),
 				"machine_id", pid.MachineId)
 
 			return
@@ -150,14 +150,14 @@ func (c *Context) MonitorMachine(machine *Machine) Abortable {
 
 	logger.Info("setting up machine connection monitor",
 		"monitored_machine", machine.MachineId,
-		"monitor_pid", c.self.String())
+		"monitor_pid", c.self.Id)
 
 	if !machine.connected {
 		//The remote machine already disconnected, send a down message immediately
 
 		logger.Warn("monitored machine already disconnected, sending out DisconnectMessage to monitor immediately",
 			"monitored_machine", machine.MachineId,
-			"monitor_pid", c.self.String())
+			"monitor_pid", c.self.Id)
 
 		doSend(c.self, DisconnectMessage{MachineId: machine.MachineId, Address: machine.Address}, nil)
 		return &noopAbortable{}
@@ -181,14 +181,14 @@ func (c *Context) Monitor(pid *Pid) Abortable {
 	okChan := make(chan bool)
 
 	logger.Info("setting up monitor",
-		"monitored_pid", pid.String(),
-		"monitor_pid", c.self.String())
+		"monitored_gpid", pid.String(),
+		"monitor_pid", c.self.Id)
 
 	go func() {
 		if pid.MachineId != machineId {
 			logger.Debug("pid to monitor is not on this machine, forwarding to remote machine",
-				"monitored_pid", pid.String(),
-				"monitor_pid", c.self.String(),
+				"monitored_gpid", pid.String(),
+				"monitor_pid", c.self.Id,
 				"machine_id", pid.MachineId)
 
 			m, ok := getMachine(pid.MachineId)
@@ -200,8 +200,8 @@ func (c *Context) Monitor(pid *Pid) Abortable {
 			}
 
 			logger.Warn("remote machine is not registered, couldn't monitor pid",
-				"monitored_pid", pid.String(),
-				"monitor_pid", c.self.String(),
+				"monitored_gpid", pid.String(),
+				"monitor_pid", c.self.Id,
 				"machine_id", pid.MachineId)
 
 			errorChan <- true
@@ -237,8 +237,8 @@ func (c *Context) Monitor(pid *Pid) Abortable {
 		//Either way, send a down message
 
 		logger.Warn("monitored pid is either dead or on a machine that disconnected, sending out DownMessage to monitor immediately",
-			"monitored_pid", pid.String(),
-			"monitor_pid", c.self.String())
+			"monitored_gpid", pid.String(),
+			"monitor_pid", c.self.Id)
 
 		doSend(c.self, DownMessage{Who: pid}, nil)
 		return &noopAbortable{}

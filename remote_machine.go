@@ -160,8 +160,8 @@ func (m *Machine) startMessageClient(messageChan <-chan remoteMessageTuple, gate
 		case message := <-messageChan:
 			if d, ok := message.Message.(DownMessage); ok {
 				logger.Trace("cleaning up old remote monitor abortable, local PID just went down",
-					"monitor_pid", message.To.String(),
-					"monitored_pid", d.Who.String())
+					"monitor_gpid", message.To.String(),
+					"monitored_pid", d.Who.Id)
 
 				remoteMonitorQuitAbortablesMu.Lock()
 				delete(remoteMonitorQuitAbortables, message.To.String()+"_"+d.Who.String())
@@ -189,7 +189,7 @@ func (m *Machine) startMessageClient(messageChan <-chan remoteMessageTuple, gate
 
 			if err != nil {
 				logger.Warn("there was an error while sending message to remote machine",
-					"receiver_pid", message.To.String(),
+					"receiver_gpid", message.To.String(),
 					"machine_id", m.MachineId,
 					"error", err)
 				m.stop()
@@ -199,7 +199,7 @@ func (m *Machine) startMessageClient(messageChan <-chan remoteMessageTuple, gate
 
 			if err != nil {
 				logger.Warn("there was an error while sending message to remote machine",
-					"receiver_pid", message.To.String(),
+					"receiver_gpid", message.To.String(),
 					"machine_id", m.MachineId,
 					"error", err)
 				m.stop()
@@ -262,7 +262,7 @@ func (m *Machine) startGpClient(gpQuitChan <-chan bool, quitChan <-chan *Pid, mo
 			})
 			if err != nil {
 				logger.Warn("there was an error while sending kill command to remote machine",
-					"target_pid", p.String(),
+					"target_gpid", p.String(),
 					"machine_id", m.MachineId,
 					"error", err)
 				m.stop()
@@ -282,8 +282,8 @@ func (m *Machine) startGpClient(gpQuitChan <-chan bool, quitChan <-chan *Pid, mo
 			})
 			if err != nil {
 				logger.Warn("there was an error while sending monitor request to remote machine",
-					"monitor", r.From.String(),
-					"monitored_pid", r.To.String(),
+					"monitor_pid", r.From.Id,
+					"monitored_gpid", r.To.String(),
 					"machine_id", m.MachineId,
 					"error", err)
 				m.stop()

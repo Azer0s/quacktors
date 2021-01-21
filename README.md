@@ -211,6 +211,12 @@ For multiple actors (A, B & C send messages to D), we can't make that guarantee 
 
 As with basically all other actor systems, there is no guarantee (or even acknowledgement) that a message has been received. `Send` is a non-blocking call and doesn't return anything (even if the sending procedure failed).
 
+### On PID logging
+
+When starting quacktors for the first time, you might notice that sometimes quacktors logs PIDs with a global PID (i.e. PID + machine ID) and sometimes just a local PID is logged.
+This is because sometimes there is ambiguity as to where (on which machine) a PID lives (e.g. when telling a PID to quit) and other times
+it's clear that the PID is on the local system (e.g. when starting an actor). Global actor PIDs are named `gpid` when logging.
+
 ### Configuring quacktors
 
 quacktors has some configuration options which can be set by using the `config` package during `init`.

@@ -17,16 +17,16 @@ type monitorAbortable struct {
 
 func (ma *monitorAbortable) Abort() {
 	logger.Debug("demonitoring pid",
-		"monitored_pid", ma.pid.String(),
-		"monitor_pid", ma.self.String())
+		"monitored_gpid", ma.pid.String(),
+		"monitor_pid", ma.self.Id)
 
 	go func() {
 		if ma.pid.MachineId != machineId {
 			//Monitor is not on this machine
 
 			logger.Debug("monitor to abort is not on this machine, forwarding to remote machine",
-				"monitored_pid", ma.pid.String(),
-				"monitor_pid", ma.self.String(),
+				"monitored_gpid", ma.pid.String(),
+				"monitor_pid", ma.self.Id,
 				"machine_id", ma.pid.MachineId)
 
 			m, ok := getMachine(ma.pid.MachineId)
@@ -38,8 +38,8 @@ func (ma *monitorAbortable) Abort() {
 			}
 
 			logger.Warn("remote machine is not registered, couldn't abort monitor",
-				"monitored_pid", ma.pid.String(),
-				"monitor_pid", ma.self.String(),
+				"monitored_gpid", ma.pid.String(),
+				"monitor_pid", ma.self.Id,
 				"machine_id", ma.pid.MachineId)
 
 			return
@@ -53,8 +53,8 @@ func (ma *monitorAbortable) Abort() {
 
 		if ma.pid.demonitorChan == nil {
 			logger.Warn("pid to demonitor is already down",
-				"monitored_pid", ma.pid.String(),
-				"monitor_pid", ma.self.String())
+				"monitored_gpid", ma.pid.String(),
+				"monitor_pid", ma.self.Id)
 			return
 		}
 
@@ -70,7 +70,7 @@ type machineConnectionMonitorAbortable struct {
 func (ma *machineConnectionMonitorAbortable) Abort() {
 	logger.Debug("demonitoring machine connection",
 		"machine_id", ma.machine.MachineId,
-		"monitor_pid", ma.monitor.String())
+		"monitor_pid", ma.monitor.Id)
 
 	go func() {
 		ma.machine.monitorsMu.Lock()
@@ -85,7 +85,7 @@ func (ma *machineConnectionMonitorAbortable) Abort() {
 		if !ma.machine.connected {
 			logger.Warn("machine connection to demonitor is already down",
 				"machine_id", ma.machine.MachineId,
-				"monitor_pid", ma.monitor.String())
+				"monitor_pid", ma.monitor.Id)
 			return
 		}
 

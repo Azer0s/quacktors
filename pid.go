@@ -46,7 +46,7 @@ func (pid *Pid) Is(other *Pid) bool {
 
 func (pid *Pid) cleanup() {
 	logger.Debug("cleaning up pid",
-		"pid_id", pid.Id)
+		"pid", pid.Id)
 
 	deletePid(pid.Id)
 
@@ -65,7 +65,7 @@ func (pid *Pid) cleanup() {
 	if len(pid.scheduled) != 0 {
 		//Terminate all scheduled events/send down message to monitor tasks
 		logger.Debug("sending out scheduled events after pid cleanup",
-			"pid_id", pid.Id)
+			"pid", pid.Id)
 
 		for n, ch := range pid.scheduled {
 			//what if someone aborts the monitor while we attempt to write to it?
@@ -80,7 +80,7 @@ func (pid *Pid) cleanup() {
 
 	if len(pid.monitorQuitChannels) != 0 {
 		logger.Debug("deleting monitor abort channels",
-			"pid_id", pid.Id)
+			"pid", pid.Id)
 
 		//Delete monitorQuitChannels
 		for n, c := range pid.monitorQuitChannels {
@@ -126,8 +126,8 @@ func (pid *Pid) removeMonitor(monitor *Pid) {
 	delete(pid.scheduled, name)
 
 	logger.Info("monitor removed successfully",
-		"monitored_pid", pid.String(),
-		"monitor_pid", monitor.String())
+		"monitored_pid", pid.Id,
+		"monitor_gpid", monitor.String())
 }
 
 func (pid *Pid) String() string {
@@ -150,7 +150,7 @@ func (pid *Pid) die() {
 	}()
 
 	logger.Debug("sending quit command to actor",
-		"pid", pid.String())
+		"pid", pid.Id)
 
 	if pid.quitChan == nil {
 		return

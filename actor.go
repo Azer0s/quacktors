@@ -131,7 +131,7 @@ func startActor(actor Actor) *Pid {
 	actor.Init(ctx)
 
 	logger.Info("starting actor",
-		"pid", pid.String())
+		"pid", pid.Id)
 
 	go func() {
 		defer func() {
@@ -139,11 +139,11 @@ func startActor(actor Actor) *Pid {
 			if r := recover(); r != nil {
 				if _, ok := r.(quitAction); ok {
 					logger.Info("actor quit",
-						"pid", pid.String())
+						"pid", pid.Id)
 				} else {
 					//if we did pick up a panic, log it
 					logger.Warn("actor quit due to panic",
-						"pid", pid.String(),
+						"pid", pid.Id,
 						"panic", r)
 				}
 			}
@@ -172,13 +172,13 @@ func startActor(actor Actor) *Pid {
 			select {
 			case <-quitChan:
 				logger.Info("actor received quit event",
-					"pid", pid.String())
+					"pid", pid.Id)
 				return
 			case m := <-messageChan:
 				switch m.message.(type) {
 				case PoisonPill:
 					logger.Info("actor received poison pill",
-						"pid", pid.String())
+						"pid", pid.Id)
 					//Quit actor on PoisonPill message
 					return
 				default:
@@ -188,7 +188,8 @@ func startActor(actor Actor) *Pid {
 						if m.spanContext != nil && ctx.traceName != "" {
 							span := opentracing.GlobalTracer().StartSpan(ctx.traceName,
 								ctx.traceFork(m.spanContext))
-							span.SetTag("pid", pid.String())
+							span.SetTag("pid", pid.Id)
+							span.SetTag("machine_id", pid.MachineId)
 							ctx.span = span
 
 							defer span.Finish()
@@ -202,13 +203,13 @@ func startActor(actor Actor) *Pid {
 				}
 			case monitor := <-monitorChan:
 				logger.Info("actor received monitor request",
-					"pid", pid.String(),
-					"monitor", monitor.String())
+					"pid", pid.Id,
+					"monitor_gpid", monitor.String())
 				pid.setupMonitor(monitor)
 			case monitor := <-demonitorChan:
 				logger.Info("actor received demonitor request",
-					"pid", pid.String(),
-					"monitor", monitor.String())
+					"pid", pid.Id,
+					"monitor_gpid", monitor.String())
 				pid.removeMonitor(monitor)
 			}
 		}
