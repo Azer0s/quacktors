@@ -205,6 +205,8 @@ So you don't even have to write your own actors if you don't want to. Cool, isn'
 
 ### Quacktor streams
 
+quacktors supports stream processing out of the box. Currently, there is only a connector for Apache Kafka (https://github.com/Azer0s/quacktorstreams-kafka) but many more will come in the future.
+
 ````go
 context := quacktors.RootContext()
 
@@ -213,8 +215,8 @@ config := &kafka.ConfigMap{
     "group.id":          "default",
 }
 
-consumer, _ := NewConsumer(&KafkaConsumer{Config: config})
-producer := NewProducer(&KafkaProducer{Config: config}, "test")
+consumer, _ := quacktorstreams.NewConsumer(&streamskafka.KafkaConsumer{Config: config})
+producer := quacktorstreams.NewProducer(&streamskafka.KafkaProducer{Config: config}, "test")
 
 pid := quacktors.Spawn(func(ctx *quacktors.Context, message quacktors.Message) {
     fmt.Println(message)

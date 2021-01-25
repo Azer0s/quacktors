@@ -1,22 +1,18 @@
 package quacktorstreams
 
-/*func TestStream(t *testing.T) {
+import (
+	"encoding/json"
+	"fmt"
+	"github.com/Azer0s/quacktors"
+	"os"
+	"testing"
+)
+
+func TestStream(t *testing.T) {
 	context := quacktors.RootContext()
 
-	testTopic := "test"
-
-	consumer, _ := NewConsumer(&KafkaConsumer{
-		Config: &kafka.ConfigMap{
-			"bootstrap.servers": "localhost",
-			"group.id":          "default",
-		},
-	})
-
-	producer := NewProducer(&KafkaProducer{
-		Config: &kafka.ConfigMap{
-			"bootstrap.servers": "localhost",
-		},
-	}, testTopic)
+	consumer, _ := NewConsumer(&testConsumer{})
+	producer := NewProducer(&testProducer{}, "test")
 
 	pid := quacktors.Spawn(func(ctx *quacktors.Context, message quacktors.Message) {
 		if message.(quacktors.GenericMessage).Value == "exit" {
@@ -41,4 +37,3 @@ package quacktorstreams
 
 	quacktors.Run()
 }
-*/
