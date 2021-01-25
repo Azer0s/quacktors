@@ -47,7 +47,7 @@ func (p PoisonPill) Type() string {
 //The GenericMessage carries a single Value of type interface{}.
 type GenericMessage struct {
 	//Value is the value a GenericMessage carries.
-	Value interface{}
+	Value interface{} `json:"value"`
 }
 
 //Type of GenericMessage returns "GenericMessage"

@@ -203,6 +203,35 @@ res, err := genserver.Call(pid, PrintRequest{})
 
 So you don't even have to write your own actors if you don't want to. Cool, isn't it?
 
+### Quacktor streams
+
+````go
+context := quacktors.RootContext()
+
+config := &kafka.ConfigMap{
+    "bootstrap.servers": "localhost",
+    "group.id":          "default",
+}
+
+consumer, _ := NewConsumer(&KafkaConsumer{Config: config})
+producer := NewProducer(&KafkaProducer{Config: config}, "test")
+
+pid := quacktors.Spawn(func(ctx *quacktors.Context, message quacktors.Message) {
+    fmt.Println(message)
+})
+
+_ = consumer.Subscribe("test", pid, func(bytes []byte) (quacktors.Message, error) {
+    val := quacktors.GenericMessage{}
+    err := json.Unmarshal(bytes, &val)
+    return val, err
+})
+
+context.Send(producer, quacktors.GenericMessage{Value: 1})
+context.Send(producer, quacktors.GenericMessage{Value: 2})
+
+quacktors.Run()
+````
+
 ### On message order and reception
 
 In quacktors, message order is guaranteed from one actor to another. Meaning that if you send messages from A to B, they will arrive in order. The same is true for remote actors.
@@ -213,9 +242,10 @@ As with basically all other actor systems, there is no guarantee (or even acknow
 
 ### On PID logging
 
-When starting quacktors for the first time, you might notice that sometimes quacktors logs PIDs with a global PID (i.e. PID + machine ID) and sometimes just a local PID is logged.
+When starting quacktors for the first time, you might notice that sometimes quacktors logs with a global PID (i.e. PID + machine ID) and sometimes just a local PID is logged.
 This is because sometimes there is ambiguity as to where (on which machine) a PID lives (e.g. when telling a PID to quit) and other times
-it's clear that the PID is on the local system (e.g. when starting an actor). Global actor PIDs are named `gpid` when logging.
+it's clear that the PID is on the local system (e.g. when starting an actor). Global actor PIDs are named `gpid` when logging. When we **know** that a PID lives on a remote machine,
+we don't only log the `gpid` but also the `machineId`.
 
 ### Configuring quacktors
 
