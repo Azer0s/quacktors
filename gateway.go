@@ -5,6 +5,7 @@ import (
 	"encoding/gob"
 	"errors"
 	"github.com/Azer0s/qpmd"
+	"github.com/Azer0s/quacktors/metrics"
 	"github.com/opentracing/opentracing-go"
 	"github.com/vmihailenco/msgpack/v5"
 	"io"
@@ -138,6 +139,7 @@ func handleMessageClient(conn net.Conn) {
 				spanContext, _ = opentracing.GlobalTracer().Extract(opentracing.Binary, bytes.NewBuffer(spanCtxBytes))
 			}
 
+			metrics.RecordReceiveRemote(toPid.Id)
 			doSend(toPid, msg, spanContext)
 		}(msgData)
 	}

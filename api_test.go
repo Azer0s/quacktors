@@ -1,3 +1,5 @@
+// +build !noapitest
+
 package quacktors
 
 import (

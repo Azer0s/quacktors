@@ -13,7 +13,7 @@ type Pid struct {
 	MachineId     string
 	Id            string
 	quitChan      chan<- bool
-	messageChan   chan<- localMessage
+	messageChan   chan<- interface{}
 	monitorChan   chan<- *Pid
 	demonitorChan chan<- *Pid
 	//Stores channels to scheduled tasks (monitors, SendAfter, monitors the actor itself launches but doesn't consume)
@@ -22,7 +22,7 @@ type Pid struct {
 	monitorQuitChannels map[string]chan bool
 }
 
-func createPid(quitChan chan<- bool, messageChan chan<- localMessage, monitorChan chan<- *Pid, demonitorChan chan<- *Pid, scheduled map[string]chan bool, monitorQuitChannels map[string]chan bool) *Pid {
+func createPid(quitChan chan<- bool, messageChan chan<- interface{}, monitorChan chan<- *Pid, demonitorChan chan<- *Pid, scheduled map[string]chan bool, monitorQuitChannels map[string]chan bool) *Pid {
 	pid := &Pid{
 		MachineId:           machineId,
 		Id:                  "",
