@@ -117,6 +117,14 @@ func doSend(to *Pid, message Message, spanContext opentracing.SpanContext) {
 	<-returnChan
 }
 
+func recordDroppedMessages(pidId string, mb *mailbox.Mailbox) {
+	unreadMessages := mb.Len()
+	if unreadMessages != 0 {
+		//If we still have pending messages in the channel, these are marked as dropped
+		metrics.RecordDrop(pidId, mb.Len())
+	}
+}
+
 func startActor(actor Actor) *Pid {
 	quitChan := make(chan bool)      //channel to quit
 	mb := mailbox.New()              //message mailbox
@@ -163,12 +171,7 @@ func startActor(actor Actor) *Pid {
 
 			//We don't really care how the actor died, we just wanna know that it did
 			metrics.RecordDie(pid.Id)
-
-			unreadMessages := mb.Len()
-			if unreadMessages != 0 {
-				//If we still have pending messages in the channel, these are marked as dropped
-				metrics.RecordDrop(pid.Id, mb.Len())
-			}
+			recordDroppedMessages(pid.Id, mb)
 
 			if len(ctx.deferred) != 0 {
 				ctx.Logger.Debug("executing deferred actor actions")

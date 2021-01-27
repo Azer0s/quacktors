@@ -29,9 +29,13 @@ jobs:
             curl https://raw.githubusercontent.com/golang/dep/master/install.sh | sh
             dep ensure
         fi
+        go get github.com/gojp/goreportcard/cmd/goreportcard-cli
 
     - name: Build
       run: go build -v .
 
     - name: Test
       run: go test -tags noapitest ./...
+
+    - name: Go Report Card
+      run: goreportcard-cli -v -t 100
