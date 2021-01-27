@@ -29,6 +29,10 @@ jobs:
             curl https://raw.githubusercontent.com/golang/dep/master/install.sh | sh
             dep ensure
         fi
+        go get -u github.com/Azer0s/qpmd/...
+        go install github.com/Azer0s/qpmd/cmd/qpmd
+        qpmd install
+        qpmd start
         go get github.com/gojp/goreportcard/cmd/goreportcard-cli
 
     - name: Build
