@@ -33,13 +33,9 @@ jobs:
         go install github.com/Azer0s/qpmd/cmd/qpmd
         sudo /home/runner/go/bin/qpmd install
         sudo /home/runner/go/bin/qpmd start
-        go get github.com/gojp/goreportcard/cmd/goreportcard-cli
 
     - name: Build
       run: go build -v .
 
     - name: Test
       run: go test -tags noapitest ./...
-
-    - name: Go Report Card
-      run: goreportcard-cli -v -t 100

@@ -88,6 +88,19 @@ func (s *supervisorComponent) Run(ctx *quacktors.Context, message quacktors.Mess
 		defer mu.Unlock()
 
 		if m, ok := message.(quacktors.DownMessage); ok {
+			//sometimes the monitor abort doesn't go out in time so we still get
+			//the DownMessage for some supervision strategies
+			//just checking if we even have the PID for which we just got a DownMessage
+			//does the trick and prevents false restarts
+			found := false
+			for _, pid := range s.pids {
+				found = found || pid.Is(m.Who)
+			}
+
+			if !found {
+				return
+			}
+
 			switch s.strategy {
 			case ONE_FOR_ONE_STRATEGY:
 				//just restart the actor that failed
