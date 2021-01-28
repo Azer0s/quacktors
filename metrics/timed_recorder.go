@@ -5,16 +5,20 @@ import (
 	"time"
 )
 
+type TimedMetrics struct {
+	SpawnCount,
+	DieCount,
+	DropCount,
+	RemoteDropCount,
+	UnhandledCount,
+	ReceiveTotalCount,
+	ReceiveRemoteCount,
+	SendLocalCount,
+	SendRemoteCount int32
+}
+
 type TimedRecorderHook interface {
-	RecordSpawn(count int32)
-	RecordDie(count int32)
-	RecordDrop(count int32)
-	RecordDropRemote(count int32)
-	RecordUnhandled(count int32)
-	RecordReceiveTotal(count int32)
-	RecordReceiveRemote(count int32)
-	RecordSendLocal(count int32)
-	RecordSendRemote(count int32)
+	Record(metrics TimedMetrics)
 }
 
 func NewTimedRecorder(hook TimedRecorderHook, interval time.Duration) *TimedRecorder {
@@ -53,15 +57,17 @@ func (t *TimedRecorder) Init() {
 		for {
 			<-time.After(t.interval)
 
-			go t.hook.RecordSpawn(t.spawnCount.Swap(0))
-			go t.hook.RecordDie(t.dieCount.Swap(0))
-			go t.hook.RecordDrop(t.dropCount.Swap(0))
-			go t.hook.RecordDropRemote(t.remoteDropCount.Swap(0))
-			go t.hook.RecordUnhandled(t.unhandledCount.Swap(0))
-			go t.hook.RecordReceiveTotal(t.receiveTotalCount.Swap(0))
-			go t.hook.RecordReceiveRemote(t.receiveRemoteCount.Swap(0))
-			go t.hook.RecordSendLocal(t.sendLocalCount.Swap(0))
-			go t.hook.RecordSendRemote(t.sendRemoteCount.Swap(0))
+			go t.hook.Record(TimedMetrics{
+				t.spawnCount.Swap(0),
+				t.dieCount.Swap(0),
+				t.dropCount.Swap(0),
+				t.remoteDropCount.Swap(0),
+				t.unhandledCount.Swap(0),
+				t.receiveTotalCount.Swap(0),
+				t.receiveRemoteCount.Swap(0),
+				t.sendLocalCount.Swap(0),
+				t.sendRemoteCount.Swap(0),
+			})
 		}
 	}()
 }

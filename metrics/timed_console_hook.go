@@ -5,38 +5,14 @@ import "fmt"
 type TimedConsoleHook struct {
 }
 
-func (t *TimedConsoleHook) RecordSpawn(count int32) {
-	fmt.Println("Spawn:", count)
-}
-
-func (t *TimedConsoleHook) RecordDie(count int32) {
-	fmt.Println("Die:", count)
-}
-
-func (t *TimedConsoleHook) RecordDrop(count int32) {
-	fmt.Println("Drop (local):", count)
-}
-
-func (t *TimedConsoleHook) RecordDropRemote(count int32) {
-	fmt.Println("Drop (remote):", count)
-}
-
-func (t *TimedConsoleHook) RecordUnhandled(count int32) {
-	fmt.Println("Unhandled:", count)
-}
-
-func (t *TimedConsoleHook) RecordReceiveTotal(count int32) {
-	fmt.Println("Receive (total):", count)
-}
-
-func (t *TimedConsoleHook) RecordReceiveRemote(count int32) {
-	fmt.Println("Receive (remote):", count)
-}
-
-func (t *TimedConsoleHook) RecordSendLocal(count int32) {
-	fmt.Println("Send (local):", count)
-}
-
-func (t *TimedConsoleHook) RecordSendRemote(count int32) {
-	fmt.Println("Send (remote):", count)
+func (t *TimedConsoleHook) Record(metrics TimedMetrics) {
+	fmt.Println("Spawn:", metrics.SpawnCount)
+	fmt.Println("Die:", metrics.DieCount)
+	fmt.Println("Drop (local):", metrics.DropCount)
+	fmt.Println("Drop (remote):", metrics.RemoteDropCount)
+	fmt.Println("Unhandled:", metrics.UnhandledCount)
+	fmt.Println("Receive (total):", metrics.ReceiveTotalCount)
+	fmt.Println("Receive (remote):", metrics.ReceiveRemoteCount)
+	fmt.Println("Send (local):", metrics.SendLocalCount)
+	fmt.Println("Send (remote):", metrics.SendRemoteCount)
 }
