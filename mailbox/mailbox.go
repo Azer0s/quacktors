@@ -4,6 +4,7 @@ import (
 	"container/list"
 )
 
+//New creates a new Mailbox and returns the pointer to it.
 func New() *Mailbox {
 	mb := &Mailbox{
 		inChan:  make(chan interface{}),
@@ -22,14 +23,17 @@ type Mailbox struct {
 	queue   *list.List
 }
 
+//In returns the input channel of a mailbox.
 func (mb *Mailbox) In() chan<- interface{} {
 	return mb.inChan
 }
 
+//Out returns the output channel of a mailbox.
 func (mb *Mailbox) Out() <-chan interface{} {
 	return mb.outChan
 }
 
+//Len returns the length of the mailbox buffer.
 func (mb *Mailbox) Len() int {
 	return mb.queue.Len()
 }
