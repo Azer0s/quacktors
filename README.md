@@ -49,6 +49,10 @@ printer, ok := node.Remote("printer")
 rootCtx.Send(printer, quacktors.GenericMessage{Value: "Hello, world"})
 ```
 
+### Custom messages
+
+//TODO: Doc
+
 ### Monitoring actors
 
 quacktors can monitor both local, as well as remote actors. As soon as the monitored actor goes down, a `DownMessage` is sent out to the monitoring actor.
@@ -106,6 +110,10 @@ rootCtx.Send(a1, quacktors.EmptyMessage{})
 
 quacktors.Run()
 ```
+
+### Metrics
+
+//TODO: Doc
 
 ### Supervision
 

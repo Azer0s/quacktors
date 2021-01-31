@@ -2,14 +2,14 @@ package genserver
 
 import (
 	"github.com/Azer0s/quacktors"
-	"github.com/Azer0s/quacktors/config"
+	"github.com/Azer0s/quacktors/typeregister"
 )
 
 func init() {
-	config.GetEncoder().RegisterType(callMessage{}.Type(), callMessage{})
-	config.GetEncoder().RegisterType(castMessage{}.Type(), castMessage{})
-	config.GetEncoder().RegisterType(ReceivedMessage{}.Type(), ReceivedMessage{})
-	config.GetEncoder().RegisterType(ResponseMessage{}.Type(), ResponseMessage{})
+	typeregister.Store(callMessage{}.Type(), callMessage{})
+	typeregister.Store(castMessage{}.Type(), castMessage{})
+	typeregister.Store(ReceivedMessage{}.Type(), ReceivedMessage{})
+	typeregister.Store(ResponseMessage{}.Type(), ResponseMessage{})
 }
 
 type callMessage struct {

@@ -1,7 +1,6 @@
 package config
 
 import (
-	"github.com/Azer0s/quacktors/encoding"
 	"github.com/Azer0s/quacktors/logging"
 )
 
@@ -14,17 +13,6 @@ func SetLogger(l logging.Logger) {
 //GetLogger gets the configured Logger implementation.
 func GetLogger() logging.Logger {
 	return logger
-}
-
-//SetEncoder sets the encoder implementation used by quacktors.
-//(MsgpackEncoder by default)
-func SetEncoder(e encoding.MessageEncoder) {
-	encoder = e
-}
-
-//GetEncoder gets the configured encoder implementation.
-func GetEncoder() encoding.MessageEncoder {
-	return encoder
 }
 
 //SetQpmdPort sets the port quacktors uses to connect to

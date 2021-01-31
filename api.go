@@ -2,6 +2,7 @@ package quacktors
 
 import (
 	"errors"
+	"github.com/Azer0s/quacktors/typeregister"
 	"github.com/opentracing/opentracing-go"
 	"reflect"
 	"regexp"
@@ -35,7 +36,7 @@ func RegisterType(message Message) {
 		panic("message.Type() can not return an empty string")
 	}
 
-	encoder.RegisterType(message.Type(), message)
+	typeregister.Store(message.Type(), message)
 
 	logger.Info("registered type",
 		"type", message.Type(),

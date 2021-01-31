@@ -182,7 +182,7 @@ func (m *Machine) startMessageClient(mb *mailbox.Mailbox, gatewayQuitChan <-chan
 				remoteMonitorQuitAbortablesMu.Unlock()
 			}
 
-			msgBytes, err := encoder.Encode(message.Message.Type(), message.Message)
+			msgMap, err := encodeValue(message.Message.Type(), message.Message)
 			if err != nil {
 				continue
 			}
@@ -195,7 +195,7 @@ func (m *Machine) startMessageClient(mb *mailbox.Mailbox, gatewayQuitChan <-chan
 			b, err := msgpack.Marshal(map[string]interface{}{
 				toVal:      message.To.Id,
 				typeVal:    message.Message.Type(),
-				messageVal: msgBytes,
+				messageVal: msgMap,
 				spanCtx:    spanCtxBytes.Bytes(),
 			})
 

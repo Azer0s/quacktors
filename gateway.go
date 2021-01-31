@@ -108,7 +108,7 @@ func handleMessageClient(conn net.Conn) {
 
 			var msg Message
 
-			val, err := encoder.Decode(data[typeVal].(string), data[messageVal].([]byte))
+			val, err := decodeValue(data[typeVal].(string), data[messageVal].(map[string]interface{}))
 			msg, ok = val.(Message)
 
 			if err != nil || !ok {
