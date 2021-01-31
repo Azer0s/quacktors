@@ -68,6 +68,8 @@ func (m MyMessage) Type() string {
 }
 ```
 
+Since GenServer handler names are resolved via `Type`, GenServers cut the package prefix and append the version if there is any. So `"mypackage/MyMessage@v1"` could be referenced in a cast handler with `HandleMyMessageV1Cast` (note: letters in the version name are automatically turned to upper case).
+
 ### Monitoring actors
 
 quacktors can monitor both local, as well as remote actors. As soon as the monitored actor goes down, a `DownMessage` is sent out to the monitoring actor.

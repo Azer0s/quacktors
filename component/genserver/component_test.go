@@ -34,7 +34,7 @@ func TestGenServerCast(t *testing.T) {
 
 	r, _ := Cast(quacktors.RootContext(), genServerPid, quacktors.EmptyMessage{})
 
-	assert.Equal(t, "ReceivedMessage", r.Type())
+	assert.Equal(t, "quacktors/ReceivedMessage", r.Type())
 
 	context := quacktors.RootContext()
 	context.Kill(genServerPid)
