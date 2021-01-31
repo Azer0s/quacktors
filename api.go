@@ -1,7 +1,6 @@
 package quacktors
 
 import (
-	"encoding/gob"
 	"errors"
 	"github.com/opentracing/opentracing-go"
 	"reflect"
@@ -24,6 +23,8 @@ func callInitIfNotCalled() {
 //be sent to remote machines (which, of course, need a Message
 //with the same Message.Type registered).
 func RegisterType(message Message) {
+	callInitIfNotCalled()
+
 	t := reflect.ValueOf(message).Type().Kind()
 
 	if t == reflect.Ptr {
@@ -34,7 +35,7 @@ func RegisterType(message Message) {
 		panic("message.Type() can not return an empty string")
 	}
 
-	gob.RegisterName(message.Type(), message)
+	encoder.RegisterType(message.Type(), message)
 
 	logger.Info("registered type",
 		"type", message.Type(),

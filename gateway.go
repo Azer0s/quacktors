@@ -2,7 +2,6 @@ package quacktors
 
 import (
 	"bytes"
-	"encoding/gob"
 	"errors"
 	"github.com/Azer0s/qpmd"
 	"github.com/Azer0s/quacktors/metrics"
@@ -107,14 +106,12 @@ func handleMessageClient(conn net.Conn) {
 				return
 			}
 
-			byteBuf := bytes.NewBuffer(data[messageVal].([]byte))
-			dec := gob.NewDecoder(byteBuf)
-
 			var msg Message
 
-			err = dec.Decode(&msg)
+			val, err := encoder.Decode(data[typeVal].(string), data[messageVal].([]byte))
+			msg, ok = val.(Message)
 
-			if err != nil {
+			if err != nil || !ok {
 				logger.Warn("there was an error while decoding incoming message from remote machine",
 					"client", c,
 					"pid", pidId)

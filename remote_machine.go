@@ -2,7 +2,6 @@ package quacktors
 
 import (
 	"bytes"
-	"encoding/gob"
 	"errors"
 	"fmt"
 	"github.com/Azer0s/qpmd"
@@ -21,6 +20,7 @@ const newConnectionMessageType = "new_connection"
 
 const fromVal = "from"
 const toVal = "to"
+const typeVal = "type"
 const spanCtx = "span_ctx"
 
 const messageVal = "message"
@@ -182,13 +182,10 @@ func (m *Machine) startMessageClient(mb *mailbox.Mailbox, gatewayQuitChan <-chan
 				remoteMonitorQuitAbortablesMu.Unlock()
 			}
 
-			byteBuf := new(bytes.Buffer)
-			enc := gob.NewEncoder(byteBuf)
-
-			var inter Message
-			inter = message.Message
-
-			_ = enc.Encode(&inter)
+			msgBytes, err := encoder.Encode(message.Message.Type(), message.Message)
+			if err != nil {
+				continue
+			}
 
 			spanCtxBytes := &bytes.Buffer{}
 			if message.SpanContext != nil {
@@ -197,7 +194,8 @@ func (m *Machine) startMessageClient(mb *mailbox.Mailbox, gatewayQuitChan <-chan
 
 			b, err := msgpack.Marshal(map[string]interface{}{
 				toVal:      message.To.Id,
-				messageVal: byteBuf.Bytes(),
+				typeVal:    message.Message.Type(),
+				messageVal: msgBytes,
 				spanCtx:    spanCtxBytes.Bytes(),
 			})
 

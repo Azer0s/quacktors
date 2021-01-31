@@ -1,10 +1,10 @@
 package quacktors
 
 import (
-	"encoding/gob"
 	"fmt"
 	"github.com/Azer0s/qpmd"
 	"github.com/Azer0s/quacktors/config"
+	"github.com/Azer0s/quacktors/encoding"
 	"github.com/Azer0s/quacktors/logging"
 	"github.com/vmihailenco/msgpack/v5"
 	"net"
@@ -14,10 +14,12 @@ var messageGatewayPort = uint16(0)
 var gpGatewayPort = uint16(0)
 
 var logger logging.Logger
+var encoder encoding.MessageEncoder
 var qpmdPort uint16
 
 func initQuacktorSystems() {
 	logger = config.GetLogger()
+	encoder = config.GetEncoder()
 	qpmdPort = config.GetQpmdPort()
 
 	initializeGateways()
@@ -74,10 +76,10 @@ func initializeQpmdConnection() {
 }
 
 func initializeBuiltInMessages() {
-	gob.RegisterName(Pid{}.Type(), Pid{})
-	gob.RegisterName(DownMessage{}.Type(), DownMessage{})
-	gob.RegisterName(PoisonPill{}.Type(), PoisonPill{})
-	gob.RegisterName(GenericMessage{}.Type(), GenericMessage{})
-	gob.RegisterName(DisconnectMessage{}.Type(), DisconnectMessage{})
-	gob.RegisterName(KillMessage{}.Type(), KillMessage{})
+	encoder.RegisterType(Pid{}.Type(), Pid{})
+	encoder.RegisterType(DownMessage{}.Type(), DownMessage{})
+	encoder.RegisterType(PoisonPill{}.Type(), PoisonPill{})
+	encoder.RegisterType(GenericMessage{}.Type(), GenericMessage{})
+	encoder.RegisterType(DisconnectMessage{}.Type(), DisconnectMessage{})
+	encoder.RegisterType(KillMessage{}.Type(), KillMessage{})
 }

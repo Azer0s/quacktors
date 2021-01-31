@@ -1,15 +1,15 @@
 package genserver
 
 import (
-	"encoding/gob"
 	"github.com/Azer0s/quacktors"
+	"github.com/Azer0s/quacktors/config"
 )
 
 func init() {
-	gob.RegisterName(callMessage{}.Type(), callMessage{})
-	gob.RegisterName(castMessage{}.Type(), castMessage{})
-	gob.RegisterName(ReceivedMessage{}.Type(), ReceivedMessage{})
-	gob.RegisterName(ResponseMessage{}.Type(), ResponseMessage{})
+	config.GetEncoder().RegisterType(callMessage{}.Type(), callMessage{})
+	config.GetEncoder().RegisterType(castMessage{}.Type(), castMessage{})
+	config.GetEncoder().RegisterType(ReceivedMessage{}.Type(), ReceivedMessage{})
+	config.GetEncoder().RegisterType(ResponseMessage{}.Type(), ResponseMessage{})
 }
 
 type callMessage struct {
