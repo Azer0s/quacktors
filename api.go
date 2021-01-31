@@ -4,20 +4,20 @@ import (
 	"errors"
 	"github.com/Azer0s/quacktors/typeregister"
 	"github.com/opentracing/opentracing-go"
+	"go.uber.org/atomic"
 	"reflect"
 	"regexp"
 	"strings"
 	"sync"
 )
 
-var initCalled = false
+var initCalled = atomic.NewBool(false)
 
 func callInitIfNotCalled() {
-	if !initCalled {
+	if !initCalled.Load() {
+		initCalled.Store(true)
 		initQuacktorSystems()
 	}
-
-	initCalled = true
 }
 
 //RegisterType registers a Message to the type store so it can

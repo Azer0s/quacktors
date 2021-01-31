@@ -25,7 +25,7 @@ type DownMessage struct {
 
 //Type of DownMessage returns "DownMessage"
 func (d DownMessage) Type() string {
-	return "DownMessage"
+	return "quacktors/DownMessage"
 }
 
 //A PoisonPill can be sent to an Actor to kill it without
@@ -41,7 +41,7 @@ type PoisonPill struct {
 
 //Type of PoisonPill returns "PoisonPill"
 func (p PoisonPill) Type() string {
-	return "PoisonPill"
+	return "quacktors/PoisonPill"
 }
 
 //The GenericMessage carries a single Value of type interface{}.
@@ -52,7 +52,7 @@ type GenericMessage struct {
 
 //Type of GenericMessage returns "GenericMessage"
 func (g GenericMessage) Type() string {
-	return "GenericMessage"
+	return "quacktors/GenericMessage"
 }
 
 //The EmptyMessage struct is an empty message without any
@@ -62,7 +62,7 @@ type EmptyMessage struct {
 
 //Type of EmptyMessage returns "EmptyMessage"
 func (e EmptyMessage) Type() string {
-	return "EmptyMessage"
+	return "quacktors/EmptyMessage"
 }
 
 //A KillMessage can be sent to an Actor to ask it to shut down.
@@ -75,7 +75,7 @@ type KillMessage struct {
 
 //Type of KillMessage returns "KillMessage"
 func (k KillMessage) Type() string {
-	return "KillMessage"
+	return "quacktors/KillMessage"
 }
 
 //The DisconnectMessage is sent to a monitoring Actor whenever
@@ -89,5 +89,5 @@ type DisconnectMessage struct {
 
 //Type of DisconnectMessage returns "DisconnectMessage"
 func (d DisconnectMessage) Type() string {
-	return "DisconnectMessage"
+	return "quacktors/DisconnectMessage"
 }

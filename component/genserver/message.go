@@ -18,7 +18,7 @@ type callMessage struct {
 }
 
 func (c callMessage) Type() string {
-	return "CallMessage"
+	return "quacktors/CallMessage"
 }
 
 type castMessage struct {
@@ -27,7 +27,7 @@ type castMessage struct {
 }
 
 func (c castMessage) Type() string {
-	return "CastMessage"
+	return "quacktors/CastMessage"
 }
 
 //The ReceivedMessage struct is the acknowledgement
@@ -38,7 +38,7 @@ type ReceivedMessage struct {
 
 //Type of ReceivedMessage returns "ReceivedMessage"
 func (r ReceivedMessage) Type() string {
-	return "ReceivedMessage"
+	return "quacktors/ReceivedMessage"
 }
 
 //The ResponseMessage struct is returned as the result
@@ -50,5 +50,5 @@ type ResponseMessage struct {
 
 //Type of ResponseMessage returns "ResponseMessage"
 func (r ResponseMessage) Type() string {
-	return "ResponseMessage"
+	return "quacktors/ResponseMessage"
 }
