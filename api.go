@@ -1,29 +1,31 @@
 package quacktors
 
 import (
-	"encoding/gob"
 	"errors"
+	"github.com/Azer0s/quacktors/typeregister"
 	"github.com/opentracing/opentracing-go"
+	"go.uber.org/atomic"
 	"reflect"
 	"regexp"
 	"strings"
 	"sync"
 )
 
-var initCalled = false
+var initCalled = atomic.NewBool(false)
 
 func callInitIfNotCalled() {
-	if !initCalled {
+	if !initCalled.Load() {
+		initCalled.Store(true)
 		initQuacktorSystems()
 	}
-
-	initCalled = true
 }
 
 //RegisterType registers a Message to the type store so it can
 //be sent to remote machines (which, of course, need a Message
 //with the same Message.Type registered).
 func RegisterType(message Message) {
+	callInitIfNotCalled()
+
 	t := reflect.ValueOf(message).Type().Kind()
 
 	if t == reflect.Ptr {
@@ -34,7 +36,7 @@ func RegisterType(message Message) {
 		panic("message.Type() can not return an empty string")
 	}
 
-	gob.RegisterName(message.Type(), message)
+	typeregister.Store(message.Type(), message)
 
 	logger.Info("registered type",
 		"type", message.Type(),

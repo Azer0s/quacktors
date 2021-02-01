@@ -17,7 +17,9 @@ func TestMessageOrdering(t *testing.T) {
 	pid := Spawn(func(ctx *Context, message Message) {
 		switch m := message.(type) {
 		case GenericMessage:
-			fmt.Println(i)
+			if i%100 == 0 {
+				fmt.Println(i)
+			}
 			i++
 			testChan <- m.Value.(string)
 		}
@@ -154,12 +156,45 @@ func TestMonitorDeadPid(t *testing.T) {
 	Run()
 }
 
-type TestMessage struct {
-	Foo string
+type TestActor struct {
+	count int
 }
 
-func (t TestMessage) Type() string {
-	return "TestMessage"
+func (t *TestActor) Run(ctx *Context, message Message) {
+	for {
+		t.count++
+	}
+}
+
+func (t *TestActor) Init(ctx *Context) {
+
+}
+
+func TestActorSpawn(t *testing.T) {
+	actor := &TestActor{}
+
+	p := SpawnStateful(actor)
+	context := RootContext()
+	context.Kill(p)
+
+	Run()
+}
+
+func TestContext_SendAfter(t *testing.T) {
+	rootContext := RootContext()
+
+	p := Spawn(func(ctx *Context, message Message) {
+		t.Fail()
+	})
+
+	a := rootContext.SendAfter(p, GenericMessage{}, 1*time.Second)
+	a.Abort()
+
+	<-time.After(3 * time.Second)
+
+	rootContext.Kill(p)
+
+	Run()
 }
 
 func TestNewSystem(t *testing.T) {
@@ -169,6 +204,9 @@ func TestNewSystem(t *testing.T) {
 		panic(err)
 	}
 }
+
+/*
+Remote tests are commented out because they can, as of right now, only be run manually
 
 func TestNewSystemWithHandler(t *testing.T) {
 	s, err := NewSystem("test")
@@ -310,40 +348,4 @@ func TestConnectPoisonPill(t *testing.T) {
 
 	<-time.After(50 * time.Millisecond)
 }
-
-type TestActor struct {
-	count int
-}
-
-func (t *TestActor) Run(ctx *Context, message Message) {
-	for {
-		t.count++
-	}
-}
-
-func (t *TestActor) Init(ctx *Context) {
-
-}
-
-func TestActorSpawn(t *testing.T) {
-	actor := &TestActor{}
-
-	SpawnStateful(actor)
-}
-
-func TestContext_SendAfter(t *testing.T) {
-	rootContext := RootContext()
-
-	p := Spawn(func(ctx *Context, message Message) {
-		t.Fail()
-	})
-
-	a := rootContext.SendAfter(p, GenericMessage{}, 1*time.Second)
-	a.Abort()
-
-	<-time.After(3 * time.Second)
-
-	rootContext.Kill(p)
-
-	Run()
-}
+*/

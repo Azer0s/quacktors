@@ -1,6 +1,8 @@
 package config
 
-import "github.com/Azer0s/quacktors/logging"
+import (
+	"github.com/Azer0s/quacktors/logging"
+)
 
 //SetLogger sets the Logger implementation used by quacktors.
 //(LogrusLogger by default)

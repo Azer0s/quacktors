@@ -2,10 +2,11 @@ package quacktors
 
 import (
 	"bytes"
-	"encoding/gob"
 	"errors"
 	"fmt"
 	"github.com/Azer0s/qpmd"
+	"github.com/Azer0s/quacktors/mailbox"
+	"github.com/Azer0s/quacktors/metrics"
 	"github.com/opentracing/opentracing-go"
 	"github.com/vmihailenco/msgpack/v5"
 	"net"
@@ -19,6 +20,7 @@ const newConnectionMessageType = "new_connection"
 
 const fromVal = "from"
 const toVal = "to"
+const typeVal = "type"
 const spanCtx = "span_ctx"
 
 const messageVal = "message"
@@ -35,7 +37,7 @@ type Machine struct {
 	GeneralPurposePort uint16
 	gpQuitChan         chan bool
 	quitChan           chan<- *Pid
-	messageChan        chan<- remoteMessageTuple
+	messageChan        chan<- interface{}
 	monitorChan        chan<- remoteMonitorTuple
 	demonitorChan      chan<- remoteMonitorTuple
 	newConnectionChan  chan<- *Machine
@@ -143,7 +145,7 @@ func (m *Machine) removeRemoteMonitor(r remoteMonitorTuple) {
 	delete(m.monitorQuitChannels, name)
 }
 
-func (m *Machine) startMessageClient(messageChan <-chan remoteMessageTuple, gatewayQuitChan <-chan bool, okChan chan<- bool, errorChan chan<- error) {
+func (m *Machine) startMessageClient(mb *mailbox.Mailbox, gatewayQuitChan <-chan bool, okChan chan<- bool, errorChan chan<- error) {
 	logger.Debug("starting message client for remote machine",
 		"machine_id", m.MachineId)
 
@@ -153,11 +155,23 @@ func (m *Machine) startMessageClient(messageChan <-chan remoteMessageTuple, gate
 		return
 	}
 
+	defer func() {
+		l := mb.Len()
+		if l != 0 {
+			//record dropped message metric
+			metrics.RecordDropRemote(m.MachineId, l)
+		}
+	}()
+
 	okChan <- true
+
+	messageChan := mb.Out()
 
 	for {
 		select {
-		case message := <-messageChan:
+		case mi := <-messageChan:
+			message := mi.(remoteMessageTuple)
+
 			if d, ok := message.Message.(DownMessage); ok {
 				logger.Trace("cleaning up old remote monitor abortable, local PID just went down",
 					"monitor_gpid", message.To.String(),
@@ -168,13 +182,10 @@ func (m *Machine) startMessageClient(messageChan <-chan remoteMessageTuple, gate
 				remoteMonitorQuitAbortablesMu.Unlock()
 			}
 
-			byteBuf := new(bytes.Buffer)
-			enc := gob.NewEncoder(byteBuf)
-
-			var inter Message
-			inter = message.Message
-
-			_ = enc.Encode(&inter)
+			msgMap, err := encodeValue(message.Message.Type(), message.Message)
+			if err != nil {
+				continue
+			}
 
 			spanCtxBytes := &bytes.Buffer{}
 			if message.SpanContext != nil {
@@ -183,7 +194,8 @@ func (m *Machine) startMessageClient(messageChan <-chan remoteMessageTuple, gate
 
 			b, err := msgpack.Marshal(map[string]interface{}{
 				toVal:      message.To.Id,
-				messageVal: byteBuf.Bytes(),
+				typeVal:    message.Message.Type(),
+				messageVal: msgMap,
 				spanCtx:    spanCtxBytes.Bytes(),
 			})
 
@@ -353,13 +365,13 @@ func (m *Machine) connect() error {
 	//the old Machine ptr)
 
 	quitChan := make(chan *Pid, 100)
-	messageChan := make(chan remoteMessageTuple, 2000)
+	mb := mailbox.New()
 	monitorChan := make(chan remoteMonitorTuple, 100)
 	demonitorChan := make(chan remoteMonitorTuple, 100)
 	newConnectionChan := make(chan *Machine, 100)
 
 	m.quitChan = quitChan
-	m.messageChan = messageChan
+	m.messageChan = mb.In()
 	m.monitorChan = monitorChan
 	m.demonitorChan = demonitorChan
 	m.newConnectionChan = newConnectionChan
@@ -381,7 +393,7 @@ func (m *Machine) connect() error {
 	logger.Info("connecting to remote machine",
 		"machine_id", m.MachineId)
 
-	go m.startMessageClient(messageChan, gatewayQuitChan, okChan, errorChan)
+	go m.startMessageClient(mb, gatewayQuitChan, okChan, errorChan)
 
 	select {
 	case err := <-errorChan:

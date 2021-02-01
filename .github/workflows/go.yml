@@ -29,6 +29,13 @@ jobs:
             curl https://raw.githubusercontent.com/golang/dep/master/install.sh | sh
             dep ensure
         fi
+        go get -u github.com/Azer0s/qpmd/...
+        go install github.com/Azer0s/qpmd/cmd/qpmd
+        sudo /home/runner/go/bin/qpmd install
+        sudo /home/runner/go/bin/qpmd start
 
     - name: Build
       run: go build -v .
+
+    - name: Test
+      run: go test ./...

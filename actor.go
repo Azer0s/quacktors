@@ -1,6 +1,8 @@
 package quacktors
 
 import (
+	"github.com/Azer0s/quacktors/mailbox"
+	"github.com/Azer0s/quacktors/metrics"
 	"github.com/opentracing/opentracing-go"
 	"sync"
 )
@@ -62,6 +64,7 @@ func doSend(to *Pid, message Message, spanContext opentracing.SpanContext) {
 		defer func() {
 			if r := recover(); r != nil {
 				//This happens if we write to the messageChan while the actor or remote connection is being closed
+				metrics.RecordUnhandled(to.Id)
 			}
 
 			//As soon as we have put the message into the buffered messageChan, return
@@ -80,6 +83,8 @@ func doSend(to *Pid, message Message, spanContext opentracing.SpanContext) {
 					Message:     message,
 					SpanContext: spanContext,
 				}
+
+				metrics.RecordSendRemote(to.Id)
 			}
 
 			return
@@ -96,6 +101,7 @@ func doSend(to *Pid, message Message, spanContext opentracing.SpanContext) {
 					message:     message,
 					spanContext: spanContext,
 				}
+				metrics.RecordSendLocal(p.Id)
 			}
 
 			return
@@ -105,21 +111,30 @@ func doSend(to *Pid, message Message, spanContext opentracing.SpanContext) {
 			message:     message,
 			spanContext: spanContext,
 		}
+		metrics.RecordSendLocal(to.Id)
 	}()
 
 	<-returnChan
 }
 
+func recordDroppedMessages(pidId string, mb *mailbox.Mailbox) {
+	unreadMessages := mb.Len()
+	if unreadMessages != 0 {
+		//If we still have pending messages in the channel, these are marked as dropped
+		metrics.RecordDrop(pidId, mb.Len())
+	}
+}
+
 func startActor(actor Actor) *Pid {
-	quitChan := make(chan bool)                  //channel to quit
-	messageChan := make(chan localMessage, 2000) //channel for messages
-	monitorChan := make(chan *Pid)               //channel to notify the actor of who wants to monitor it
-	demonitorChan := make(chan *Pid)             //channel to notify the actor of who wants to unmonitor it
+	quitChan := make(chan bool)      //channel to quit
+	mb := mailbox.New()              //message mailbox
+	monitorChan := make(chan *Pid)   //channel to notify the actor of who wants to monitor it
+	demonitorChan := make(chan *Pid) //channel to notify the actor of who wants to unmonitor it
 
 	scheduled := make(map[string]chan bool)
 	monitorQuitChannels := make(map[string]chan bool)
 
-	pid := createPid(quitChan, messageChan, monitorChan, demonitorChan, scheduled, monitorQuitChannels)
+	pid := createPid(quitChan, mb.In(), monitorChan, demonitorChan, scheduled, monitorQuitChannels)
 	ctx := &Context{
 		self:      pid,
 		Logger:    contextLogger{pid: pid.Id},
@@ -128,10 +143,16 @@ func startActor(actor Actor) *Pid {
 		traceFork: opentracing.FollowsFrom,
 	}
 
+	//Initialize the actor
 	actor.Init(ctx)
+
+	//If the init was successful, record the spawn
+	metrics.RecordSpawn(pid.Id)
 
 	logger.Info("starting actor",
 		"pid", pid.Id)
+
+	messageChan := mb.Out()
 
 	go func() {
 		defer func() {
@@ -147,6 +168,10 @@ func startActor(actor Actor) *Pid {
 						"panic", r)
 				}
 			}
+
+			//We don't really care how the actor died, we just wanna know that it did
+			metrics.RecordDie(pid.Id)
+			recordDroppedMessages(pid.Id, mb)
 
 			if len(ctx.deferred) != 0 {
 				ctx.Logger.Debug("executing deferred actor actions")
@@ -174,7 +199,11 @@ func startActor(actor Actor) *Pid {
 				logger.Info("actor received quit event",
 					"pid", pid.Id)
 				return
-			case m := <-messageChan:
+			case mi := <-messageChan:
+				metrics.RecordReceive(pid.Id)
+
+				m := mi.(localMessage)
+
 				switch m.message.(type) {
 				case PoisonPill:
 					logger.Info("actor received poison pill",

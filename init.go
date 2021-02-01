@@ -1,11 +1,11 @@
 package quacktors
 
 import (
-	"encoding/gob"
 	"fmt"
 	"github.com/Azer0s/qpmd"
 	"github.com/Azer0s/quacktors/config"
 	"github.com/Azer0s/quacktors/logging"
+	"github.com/Azer0s/quacktors/typeregister"
 	"github.com/vmihailenco/msgpack/v5"
 	"net"
 )
@@ -74,10 +74,10 @@ func initializeQpmdConnection() {
 }
 
 func initializeBuiltInMessages() {
-	gob.RegisterName(Pid{}.Type(), Pid{})
-	gob.RegisterName(DownMessage{}.Type(), DownMessage{})
-	gob.RegisterName(PoisonPill{}.Type(), PoisonPill{})
-	gob.RegisterName(GenericMessage{}.Type(), GenericMessage{})
-	gob.RegisterName(DisconnectMessage{}.Type(), DisconnectMessage{})
-	gob.RegisterName(KillMessage{}.Type(), KillMessage{})
+	typeregister.Store(Pid{}.Type(), Pid{})
+	typeregister.Store(DownMessage{}.Type(), DownMessage{})
+	typeregister.Store(PoisonPill{}.Type(), PoisonPill{})
+	typeregister.Store(GenericMessage{}.Type(), GenericMessage{})
+	typeregister.Store(DisconnectMessage{}.Type(), DisconnectMessage{})
+	typeregister.Store(KillMessage{}.Type(), KillMessage{})
 }

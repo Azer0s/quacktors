@@ -4,6 +4,8 @@ import (
 	"errors"
 	"github.com/Azer0s/quacktors"
 	"reflect"
+	"regexp"
+	"strings"
 )
 
 //The GenServer interface defines the init method for a custom
@@ -79,6 +81,20 @@ func (g *genServerComponent) Init(ctx *quacktors.Context) {
 
 }
 
+var cleanupRe = regexp.MustCompile("^(?:\\w+/)?(\\w+)(?:@([a-zA-Z0-9]+))?$")
+
+func cleanupType(name string) string {
+	if !cleanupRe.MatchString(name) {
+		return ""
+	}
+
+	s := cleanupRe.FindStringSubmatch(name)
+	if s[2] != "" {
+		return s[1] + "V" + strings.ToUpper(s[2])
+	}
+	return s[1]
+}
+
 func (g *genServerComponent) doCall(ctx *quacktors.Context, m callMessage, handler reflect.Value) {
 	func() {
 		defer func() {
@@ -102,7 +118,7 @@ func (g *genServerComponent) doCall(ctx *quacktors.Context, m callMessage, handl
 func (g *genServerComponent) Run(ctx *quacktors.Context, message quacktors.Message) {
 	switch m := message.(type) {
 	case callMessage:
-		handler, ok := g.callHandlers[m.message.Type()]
+		handler, ok := g.callHandlers[cleanupType(m.message.Type())]
 
 		if ok {
 			g.doCall(ctx, m, handler)
@@ -115,7 +131,7 @@ func (g *genServerComponent) Run(ctx *quacktors.Context, message quacktors.Messa
 		}
 
 	case castMessage:
-		handler, ok := g.castHandlers[m.message.Type()]
+		handler, ok := g.castHandlers[cleanupType(m.message.Type())]
 
 		if ok {
 			ctx.Send(m.sender, ReceivedMessage{})
@@ -130,7 +146,7 @@ func (g *genServerComponent) Run(ctx *quacktors.Context, message quacktors.Messa
 		}
 	}
 
-	handler, ok := g.infoHandlers[message.Type()]
+	handler, ok := g.infoHandlers[cleanupType(message.Type())]
 
 	if ok {
 		handler.Call([]reflect.Value{g.self, reflect.ValueOf(ctx), reflect.ValueOf(message)})

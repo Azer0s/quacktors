@@ -2,9 +2,9 @@ package quacktors
 
 import (
 	"bytes"
-	"encoding/gob"
 	"errors"
 	"github.com/Azer0s/qpmd"
+	"github.com/Azer0s/quacktors/metrics"
 	"github.com/opentracing/opentracing-go"
 	"github.com/vmihailenco/msgpack/v5"
 	"io"
@@ -106,14 +106,12 @@ func handleMessageClient(conn net.Conn) {
 				return
 			}
 
-			byteBuf := bytes.NewBuffer(data[messageVal].([]byte))
-			dec := gob.NewDecoder(byteBuf)
-
 			var msg Message
 
-			err = dec.Decode(&msg)
+			val, err := decodeValue(data[typeVal].(string), data[messageVal].(map[string]interface{}))
+			msg, ok = val.(Message)
 
-			if err != nil {
+			if err != nil || !ok {
 				logger.Warn("there was an error while decoding incoming message from remote machine",
 					"client", c,
 					"pid", pidId)
@@ -138,6 +136,7 @@ func handleMessageClient(conn net.Conn) {
 				spanContext, _ = opentracing.GlobalTracer().Extract(opentracing.Binary, bytes.NewBuffer(spanCtxBytes))
 			}
 
+			metrics.RecordReceiveRemote(toPid.Id)
 			doSend(toPid, msg, spanContext)
 		}(msgData)
 	}

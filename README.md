@@ -49,6 +49,27 @@ printer, ok := node.Remote("printer")
 rootCtx.Send(printer, quacktors.GenericMessage{Value: "Hello, world"})
 ```
 
+### Custom messages
+
+To be able to send and receive messages from remote actors, you have to register your custom messages with quacktors. If you don't need to send a message to a remote machine, you also don't need to register it.
+
+Note: the `Type` method is used to identify your message across machines (i.e. your message names have to match between machines). The recommended way of naming your types is to use a, sort of, package structure (e.g. `"mypackage/MyMessage"`). These can then be versioned by appending `@{version}` afterwards (e.g. `"mypackage/MyMessage@v1` could reference the `MyMessageV1` struct).
+
+```go
+package mypackage
+
+type MyMessage struct {
+    Foo string
+    Bar float32
+}
+
+func (m MyMessage) Type() string {
+    return "mypackage/MyMessage"
+}
+```
+
+Since GenServer handler names are resolved via `Type`, GenServers cut the package prefix and append the version if there is any. So `"mypackage/MyMessage@v1"` could be referenced in a cast handler with `HandleMyMessageV1Cast` (note: letters in the version name are automatically turned to upper case).
+
 ### Monitoring actors
 
 quacktors can monitor both local, as well as remote actors. As soon as the monitored actor goes down, a `DownMessage` is sent out to the monitoring actor.
@@ -106,6 +127,10 @@ rootCtx.Send(a1, quacktors.EmptyMessage{})
 
 quacktors.Run()
 ```
+
+### Metrics
+
+quacktors has a metric system in place (not the 📏 kind, the 📊 one) and offers many useful components to collect and metrics (like the `TimedRecorder` and the accompanying `TimedRecorderHook` to make collecting metrics in a specified interval super easy).
 
 ### Supervision
 
