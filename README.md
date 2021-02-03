@@ -222,7 +222,7 @@ func (p Printer) HandlePrintRequestCall(ctx *quacktors.Context, message PrintReq
 }
 
 
-pid := quacktors.Spawn(genserver.New(Printer{}))
+pid := quacktors.SpawnStateful(genserver.New(Printer{}))
 res, err := genserver.Call(pid, PrintRequest{})
 ```
 
