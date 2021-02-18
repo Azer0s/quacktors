@@ -7,6 +7,27 @@ import (
 	"time"
 )
 
+func TestPassthroughPoisonPill(t *testing.T) {
+	context := RootContext()
+
+	var b *Pid
+
+	a := SpawnWithInit(func(ctx *Context) {
+		ctx.Defer(func() {
+			ctx.Kill(b)
+		})
+	}, func(ctx *Context, message Message) {})
+
+	b = SpawnWithInit(func(ctx *Context) {
+		ctx.PassthroughPoisonPill(true)
+	}, func(ctx *Context, message Message) {
+		ctx.Send(a, message)
+	})
+
+	context.Send(b, PoisonPill{})
+	Run()
+}
+
 func TestMessageOrdering(t *testing.T) {
 	rootCtx := RootContext()
 

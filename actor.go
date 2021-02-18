@@ -204,32 +204,31 @@ func startActor(actor Actor) *Pid {
 
 				m := mi.(localMessage)
 
-				switch m.message.(type) {
-				case PoisonPill:
+				if _, ok := m.message.(PoisonPill); ok && !ctx.passthroughPoisonPill {
 					logger.Info("actor received poison pill",
 						"pid", pid.Id)
 					//Quit actor on PoisonPill message
 					return
-				default:
-					ctx.span = nil
-
-					func() {
-						if m.spanContext != nil && ctx.traceName != "" {
-							span := opentracing.GlobalTracer().StartSpan(ctx.traceName,
-								ctx.traceFork(m.spanContext))
-							span.SetTag("pid", pid.Id)
-							span.SetTag("machine_id", pid.MachineId)
-							ctx.span = span
-
-							defer span.Finish()
-						}
-
-						actor.Run(ctx, m.message)
-					}()
-
-					//Clean after run so the span won't be sent in any defers if the actor goes down right after
-					ctx.span = nil
 				}
+
+				ctx.span = nil
+
+				func() {
+					if m.spanContext != nil && ctx.traceName != "" {
+						span := opentracing.GlobalTracer().StartSpan(ctx.traceName,
+							ctx.traceFork(m.spanContext))
+						span.SetTag("pid", pid.Id)
+						span.SetTag("machine_id", pid.MachineId)
+						ctx.span = span
+
+						defer span.Finish()
+					}
+
+					actor.Run(ctx, m.message)
+				}()
+
+				//Clean after run so the span won't be sent in any defers if the actor goes down right after
+				ctx.span = nil
 			case monitor := <-monitorChan:
 				logger.Info("actor received monitor request",
 					"pid", pid.Id,

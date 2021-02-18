@@ -16,13 +16,22 @@ import (
 //like current Span or a pointer to the acto
 //specific send mutex.
 type Context struct {
-	span      opentracing.Span
-	traceFork func(ctx opentracing.SpanContext) opentracing.SpanReference
-	traceName string
-	self      *Pid
-	sendLock  *sync.Mutex
-	Logger    contextLogger
-	deferred  []func()
+	span                  opentracing.Span
+	traceFork             func(ctx opentracing.SpanContext) opentracing.SpanReference
+	traceName             string
+	self                  *Pid
+	sendLock              *sync.Mutex
+	Logger                contextLogger
+	deferred              []func()
+	passthroughPoisonPill bool
+}
+
+//PassthroughPoisonPill enables message passthrough for
+//PoisonPill messages. If set to true, PoisonPill messages
+//will not shut down the actor but be forwarded to the handler
+//function.
+func (c *Context) PassthroughPoisonPill(val bool) {
+	c.passthroughPoisonPill = val
 }
 
 //Trace enables distributed tracing for the actor
