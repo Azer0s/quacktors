@@ -72,6 +72,9 @@ func TestGenServerCallWithTimeout(t *testing.T) {
 	_, err := CallWithTimeout(context, pid, quacktors.EmptyMessage{}, 1*time.Second)
 
 	assert.Error(t, err)
+
+	context.Kill(pid)
+	quacktors.Run()
 }
 
 func TestGenServerCastWithTimeout(t *testing.T) {
@@ -81,6 +84,9 @@ func TestGenServerCastWithTimeout(t *testing.T) {
 	_, err := CastWithTimeout(context, pid, quacktors.EmptyMessage{}, 1*time.Second)
 
 	assert.Error(t, err)
+
+	context.Kill(pid)
+	quacktors.Run()
 }
 
 func TestDeadGenServerCast(t *testing.T) {
