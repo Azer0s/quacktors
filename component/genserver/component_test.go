@@ -5,6 +5,7 @@ import (
 	"github.com/Azer0s/quacktors"
 	"github.com/stretchr/testify/assert"
 	"testing"
+	"time"
 )
 
 type testGenServer struct {
@@ -62,6 +63,24 @@ func TestGenServerInfo(t *testing.T) {
 	context.Send(genServerPid, quacktors.GenericMessage{Value: t})
 
 	quacktors.Run()
+}
+
+func TestGenServerCallWithTimeout(t *testing.T) {
+	pid := quacktors.Spawn(func(ctx *quacktors.Context, message quacktors.Message) {})
+
+	context := quacktors.RootContext()
+	_, err := CallWithTimeout(context, pid, quacktors.EmptyMessage{}, 1*time.Second)
+
+	assert.Error(t, err)
+}
+
+func TestGenServerCastWithTimeout(t *testing.T) {
+	pid := quacktors.Spawn(func(ctx *quacktors.Context, message quacktors.Message) {})
+
+	context := quacktors.RootContext()
+	_, err := CastWithTimeout(context, pid, quacktors.EmptyMessage{}, 1*time.Second)
+
+	assert.Error(t, err)
 }
 
 func TestDeadGenServerCast(t *testing.T) {

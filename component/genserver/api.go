@@ -5,6 +5,7 @@ import (
 	"github.com/Azer0s/quacktors"
 	"reflect"
 	"regexp"
+	"time"
 )
 
 var handleInfo = regexp.MustCompile("^Handle(.+)$")
@@ -159,6 +160,43 @@ func Call(context quacktors.Context, pid *quacktors.Pid, message quacktors.Messa
 	}
 }
 
+//CallWithTimeout is the same as Call but also
+//accepts a duration. If the GenServer doesn't
+//return a result within the timeout period,
+//an error is returned.
+func CallWithTimeout(context quacktors.Context, pid *quacktors.Pid, message quacktors.Message, duration time.Duration) (ResponseMessage, error) {
+	returnChan := make(chan ResponseMessage)
+	errChan := make(chan bool)
+
+	p := quacktors.SpawnWithInit(func(ctx *quacktors.Context) {
+		ctx.Monitor(pid)
+	}, func(ctx *quacktors.Context, message quacktors.Message) {
+		switch m := message.(type) {
+		case ResponseMessage:
+			returnChan <- m
+		case quacktors.DownMessage:
+			errChan <- true
+		}
+
+		ctx.Quit()
+	})
+
+	context.Send(pid, callMessage{
+		sender:  p,
+		message: message,
+	})
+
+	select {
+	case res := <-returnChan:
+		return res, nil
+	case <-errChan:
+		return ResponseMessage{}, errors.New("there was an error while calling to GenServer")
+	case <-time.After(duration):
+		context.Kill(p)
+		return ResponseMessage{}, errors.New("GenServer call timed out")
+	}
+}
+
 //Cast sends a message to the GenServer and blocks
 //until the GenServer has received the message and
 //is about to start processing the it. If there was
@@ -196,5 +234,42 @@ func Cast(context quacktors.Context, pid *quacktors.Pid, message quacktors.Messa
 		return res, nil
 	case <-errChan:
 		return ReceivedMessage{}, errors.New("there was an error while casting to GenServer")
+	}
+}
+
+//CastWithTimeout is the same as Cast but also
+//accepts a duration. If the GenServer doesn't
+//return a result within the timeout period,
+//an error is returned.
+func CastWithTimeout(context quacktors.Context, pid *quacktors.Pid, message quacktors.Message, duration time.Duration) (ReceivedMessage, error) {
+	returnChan := make(chan ReceivedMessage)
+	errChan := make(chan bool)
+
+	p := quacktors.SpawnWithInit(func(ctx *quacktors.Context) {
+		ctx.Monitor(pid)
+	}, func(ctx *quacktors.Context, message quacktors.Message) {
+		switch m := message.(type) {
+		case ReceivedMessage:
+			returnChan <- m
+		case quacktors.DownMessage:
+			errChan <- true
+		}
+
+		ctx.Quit()
+	})
+
+	context.Send(pid, castMessage{
+		sender:  p,
+		message: message,
+	})
+
+	select {
+	case res := <-returnChan:
+		return res, nil
+	case <-errChan:
+		return ReceivedMessage{}, errors.New("there was an error while casting to GenServer")
+	case <-time.After(duration):
+		context.Kill(p)
+		return ReceivedMessage{}, errors.New("GenServer cast timed out")
 	}
 }
