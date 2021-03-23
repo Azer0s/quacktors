@@ -78,7 +78,7 @@ type genServerComponent struct {
 }
 
 func (g *genServerComponent) Init(ctx *quacktors.Context) {
-
+	g.initFunction(ctx)
 }
 
 var cleanupRe = regexp.MustCompile("^(?:\\w+/)?(\\w+)(?:@([a-zA-Z0-9]+))?$")

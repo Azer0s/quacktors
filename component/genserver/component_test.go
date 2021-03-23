@@ -12,7 +12,7 @@ type testGenServer struct {
 }
 
 func (t testGenServer) InitGenServer(ctx *quacktors.Context) {
-
+	fmt.Println("init")
 }
 
 func (t testGenServer) HandleGenericMessage(ctx *quacktors.Context, message quacktors.GenericMessage) {
