@@ -2,6 +2,7 @@ package genserver
 
 import (
 	"errors"
+	"fmt"
 	"github.com/Azer0s/quacktors"
 	"reflect"
 	"regexp"
@@ -35,11 +36,11 @@ func checkCallHandler(mType reflect.Type) {
 }
 
 func setHandlerMethod(regex *regexp.Regexp, handlers *map[string]reflect.Value, mType reflect.Type, m reflect.Method) {
-	handlerMessageName := mType.In(2).Name()
-	messageType := regex.FindStringSubmatch(m.Name)[1]
+	messageType := mType.In(2).Name()
+	handlerMessageName := regex.FindStringSubmatch(m.Name)[1]
 
 	if handlerMessageName != messageType {
-		panic("")
+		panic(fmt.Sprintf("Handler specifies to handle messages of type %s but takes in message argument of type %s", handlerMessageName, messageType))
 	}
 
 	(*handlers)[messageType] = m.Func
