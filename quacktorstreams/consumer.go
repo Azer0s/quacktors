@@ -44,7 +44,13 @@ func (c *ConsumerActor) Subscribe(topic string, handler *quacktors.Pid, conv fun
 }
 
 func (c *ConsumerActor) Run(ctx *quacktors.Context, message quacktors.Message) {
-	defer ctx.Send(ctx.Self(), quacktors.EmptyMessage{})
+	defer func() {
+		if r := recover(); r != nil {
+			ctx.Quit()
+		}
+
+		ctx.Send(ctx.Self(), quacktors.EmptyMessage{})
+	}()
 
 	msg, err := c.Consumer.NextMessage()
 	if err != nil {

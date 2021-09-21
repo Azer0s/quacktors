@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/Azer0s/quacktors"
-	"os"
 	"testing"
 )
 
@@ -15,8 +14,8 @@ func TestStream(t *testing.T) {
 	producer := NewProducer(&testProducer{}, "test")
 
 	pid := quacktors.Spawn(func(ctx *quacktors.Context, message quacktors.Message) {
-		if message.(quacktors.GenericMessage).Value == "exit" {
-			os.Exit(0)
+		if message.(quacktors.GenericMessage).Value == "exit_subscriber" {
+			ctx.Quit()
 		}
 
 		fmt.Println(message)
@@ -31,6 +30,7 @@ func TestStream(t *testing.T) {
 	context.Send(producer, quacktors.GenericMessage{Value: 1})
 	context.Send(producer, quacktors.GenericMessage{Value: 2})
 	context.Send(producer, quacktors.GenericMessage{Value: 3})
+	context.Send(producer, quacktors.GenericMessage{Value: "exit_subscriber"})
 	context.Send(producer, quacktors.GenericMessage{Value: "exit"})
 
 	context.Send(producer, quacktors.PoisonPill{})
