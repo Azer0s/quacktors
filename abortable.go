@@ -51,14 +51,14 @@ func (ma *monitorAbortable) Abort() {
 			}
 		}()
 
-		if ma.pid.demonitorChan == nil {
+		if ma.pid.controlChan == nil {
 			logger.Warn("pid to demonitor is already down",
 				"monitored_gpid", ma.pid.String(),
 				"monitor_pid", ma.self.Id)
 			return
 		}
 
-		ma.pid.demonitorChan <- ma.self
+		ma.pid.controlChan <- demonitorControlMessage{Who: ma.self}
 	}()
 }
 

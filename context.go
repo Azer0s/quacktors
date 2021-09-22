@@ -225,12 +225,12 @@ func (c *Context) Monitor(pid *Pid) Abortable {
 			}
 		}()
 
-		if pid.monitorChan == nil {
+		if pid.controlChan == nil {
 			errorChan <- true
 			return
 		}
 
-		pid.monitorChan <- c.self
+		pid.controlChan <- monitorControlMessage{Who: c.self}
 
 		okChan <- true
 	}()

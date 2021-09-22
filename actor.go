@@ -126,15 +126,13 @@ func recordDroppedMessages(pidId string, mb *mailbox.Mailbox) {
 }
 
 func startActor(actor Actor) *Pid {
-	quitChan := make(chan bool)      //channel to quit
-	mb := mailbox.New()              //message mailbox
-	monitorChan := make(chan *Pid)   //channel to notify the actor of who wants to monitor it
-	demonitorChan := make(chan *Pid) //channel to notify the actor of who wants to unmonitor it
+	mb := mailbox.New() //message mailbox
+	cb := mailbox.New() //control mailbox; notifies actor of control messages (monitor, unmonitor, kill)
 
 	scheduled := make(map[string]chan bool)
 	monitorQuitChannels := make(map[string]chan bool)
 
-	pid := createPid(quitChan, mb.In(), monitorChan, demonitorChan, scheduled, monitorQuitChannels)
+	pid := createPid(mb.In(), cb.In(), scheduled, monitorQuitChannels)
 	ctx := &Context{
 		self:      pid,
 		Logger:    contextLogger{pid: pid.Id},
@@ -153,6 +151,7 @@ func startActor(actor Actor) *Pid {
 		"pid", pid.Id)
 
 	messageChan := mb.Out()
+	controlChan := cb.Out()
 
 	go func() {
 		defer func() {
@@ -195,9 +194,24 @@ func startActor(actor Actor) *Pid {
 
 		for {
 			select {
-			case <-quitChan:
-				logger.Info("actor received quit event",
-					"pid", pid.Id)
+			case ci := <-controlChan:
+				switch ctrlMsg := ci.(type) {
+				case killControlMessage:
+					logger.Info("actor received quit event",
+						"pid", pid.Id)
+					break
+				case monitorControlMessage:
+					logger.Info("actor received monitor request",
+						"pid", pid.Id,
+						"monitor_gpid", ctrlMsg.Who.String())
+					pid.setupMonitor(ctrlMsg.Who)
+					break
+				case demonitorControlMessage:
+					logger.Info("actor received demonitor request",
+						"pid", pid.Id,
+						"monitor_gpid", ctrlMsg.Who.String())
+					pid.removeMonitor(ctrlMsg.Who)
+				}
 				return
 			case mi := <-messageChan:
 				metrics.RecordReceive(pid.Id)
@@ -229,16 +243,6 @@ func startActor(actor Actor) *Pid {
 
 				//Clean after run so the span won't be sent in any defers if the actor goes down right after
 				ctx.span = nil
-			case monitor := <-monitorChan:
-				logger.Info("actor received monitor request",
-					"pid", pid.Id,
-					"monitor_gpid", monitor.String())
-				pid.setupMonitor(monitor)
-			case monitor := <-demonitorChan:
-				logger.Info("actor received demonitor request",
-					"pid", pid.Id,
-					"monitor_gpid", monitor.String())
-				pid.removeMonitor(monitor)
 			}
 		}
 	}()

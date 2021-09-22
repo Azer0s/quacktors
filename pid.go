@@ -10,26 +10,22 @@ import (
 //developer it will look like just another Actor they can
 //send messages to.
 type Pid struct {
-	MachineId     string
-	Id            string
-	quitChan      chan<- bool
-	messageChan   chan<- interface{}
-	monitorChan   chan<- *Pid
-	demonitorChan chan<- *Pid
+	MachineId   string
+	Id          string
+	messageChan chan<- interface{}
+	controlChan chan<- interface{}
 	//Stores channels to scheduled tasks (monitors, SendAfter, monitors the actor itself launches but doesn't consume)
 	scheduled map[string]chan bool
 	//Stores channels to tell a monitor taks to quit (when a pid is demonitored)
 	monitorQuitChannels map[string]chan bool
 }
 
-func createPid(quitChan chan<- bool, messageChan chan<- interface{}, monitorChan chan<- *Pid, demonitorChan chan<- *Pid, scheduled map[string]chan bool, monitorQuitChannels map[string]chan bool) *Pid {
+func createPid(messageChan, controlChan chan<- interface{}, scheduled, monitorQuitChannels map[string]chan bool) *Pid {
 	pid := &Pid{
 		MachineId:           machineId,
 		Id:                  "",
-		quitChan:            quitChan,
 		messageChan:         messageChan,
-		monitorChan:         monitorChan,
-		demonitorChan:       demonitorChan,
+		controlChan:         controlChan,
 		scheduled:           scheduled,
 		monitorQuitChannels: monitorQuitChannels,
 	}
@@ -50,17 +46,11 @@ func (pid *Pid) cleanup() {
 
 	deletePid(pid.Id)
 
-	close(pid.quitChan)
-	pid.quitChan = nil
+	close(pid.controlChan)
+	pid.controlChan = nil
 
 	close(pid.messageChan)
 	pid.messageChan = nil
-
-	close(pid.monitorChan)
-	pid.monitorChan = nil
-
-	close(pid.demonitorChan)
-	pid.demonitorChan = nil
 
 	if len(pid.scheduled) != 0 {
 		//Terminate all scheduled events/send down message to monitor tasks
@@ -152,9 +142,9 @@ func (pid *Pid) die() {
 	logger.Debug("sending quit command to actor",
 		"pid", pid.Id)
 
-	if pid.quitChan == nil {
+	if pid.controlChan == nil {
 		return
 	}
 
-	pid.quitChan <- true
+	pid.controlChan <- killControlMessage{}
 }
