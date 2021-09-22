@@ -199,20 +199,18 @@ func startActor(actor Actor) *Pid {
 				case killControlMessage:
 					logger.Info("actor received quit event",
 						"pid", pid.Id)
-					break
+					return
 				case monitorControlMessage:
 					logger.Info("actor received monitor request",
 						"pid", pid.Id,
 						"monitor_gpid", ctrlMsg.Who.String())
 					pid.setupMonitor(ctrlMsg.Who)
-					break
 				case demonitorControlMessage:
 					logger.Info("actor received demonitor request",
 						"pid", pid.Id,
 						"monitor_gpid", ctrlMsg.Who.String())
 					pid.removeMonitor(ctrlMsg.Who)
 				}
-				return
 			case mi := <-messageChan:
 				metrics.RecordReceive(pid.Id)
 
